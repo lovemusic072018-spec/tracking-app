@@ -1,926 +1,968 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Plus, Clock, MapPin, BookOpen, Star, 
-  Utensils, X, Heart, Sparkles, CalendarDays,
-  Trophy, Flame, Award, Activity, Timer, ArrowRight,
-  Settings, Download, Upload, Moon, Sun, Palette,
-  CheckCircle2, ListTodo, Smile, Meh, Frown,
-  ChevronLeft, ChevronRight, BookText, ChevronDown, ChevronUp,
-  Lock, Unlock, Lightbulb, Trash2, Zap, AlertTriangle, AlertCircle, Search
-} from 'lucide-react';
-
-// --- COSTANTI E DATI ---
-const dailyQuotes = [
-  "In my healing era. 🦋✨", "Long story short, I survived. 🍂", "Protect your peace. ☁️",
-  "You are the main character. 💅", "Doing it for 'future me'. 🤍", "Small habits, big changes. 🌿",
-  "Your worth is not measured by your productivity.", "Breathe in, breathe through, breathe deep, breathe out. 🌬️",
-  "Letting go of what no longer serves me. 🕊️", "Glow up internally first. 💫", "Note to self: I am doing enough.",
-  "Step into the daylight and let it go. ☀️", "You are art, treat yourself like it. 🖼️", "Manifesting a healthy mind. 🧿",
-  "Fueling my body, feeding my soul. 🍵", "It's okay to rest. You're not falling behind. 🛌☁️", "You're on your own, kid. 💫",
-  "Healing is the best glow-up. ✨", "Be the energy you want to attract. 🌸", "Taking my power back, one day at a time.",
-  "Soft girl era: resting, healing, growing. 🎀", "I wanna be defined by the things that I love. 💖", "Create a life that feels good on the inside. 🤍",
-  "Growth is uncomfortable, but so is staying stuck. 🌱", "Protecting my energy > everything else.", "A new beginning. ✨",
-  "Trust the timing of your life. 🕰️", "Be a safe space for yourself. 🏡", "I am learning to love the process.", "I'm doing better than I ever was. 🌷"
-];
-
-const milestonesDef = [
-  { target: 1, title: 'Primi Passi', desc: '1° giorno di monitoraggio.', quote: "Ogni viaggio inizia con un singolo passo. Fiera di te. ✨" },
-  { target: 3, title: 'Costanza', desc: '3 giorni di consapevolezza.', quote: "It’s been a long time coming. Stai andando benissimo! 🌸" },
-  { target: 7, title: 'Una Settimana', desc: '7 giorni consecutivi.', quote: "Sette giorni di cura verso te stessa. Proteggi questa energia. ☁️" },
-  { target: 30, title: 'Un Mese Intero', desc: '30 giorni di dedizione.', quote: "I had the time of my life fighting dragons with you. 🐉✨" },
-  { target: 90, title: 'Tre Mesi', desc: '90 giorni. Nuova stagione.', quote: "You are the best thing that's ever been mine. 🤍" },
-  { target: 180, title: 'Sei Mesi', desc: 'Metà anno.', quote: "Long story short, I survived. Guarda quanto sei andata lontano! 🍂" },
-  { target: 365, title: 'Un Anno', desc: '365 giorni di rinascita.', quote: "Step into the daylight and let it go. Hai trasformato la tua vita. ☀️" }
-];
-
-const introQuestionsByStep = {
-  1: { title: "Preparazione", desc: "Perché cambiare?", questions: ["Se smetto di abbuffarmi: starò meglio?", "Quanti anni ho passato ad abbuffarmi?", "Quanto tempo mi ha portato via?", "Quanti soldi ho speso inutilmente?", "Ho adattato la mia vita alle abbuffate?"] },
-  2: { title: "Step 2: Regolarità", desc: "Strutturare 3 pasti e 2 o 3 spuntini.", questions: ["Quali ostacoli pratici prevedo?", "Come mi sento all'idea di dover fare pasti senza fame?", "Ho dei cibi 'al sicuro' per iniziare?"] },
-  3: { title: "Step 3: Alternative", desc: "Pianificare attività per l'ora di picco.", questions: ["Quali sono le attività ATTIVE che posso fare?", "Quali attività PIACEVOLI posso fare?", "Quale musica posso preparare?"] },
-  4: { title: "Step 4: Problem Solving", desc: "Imparare i 6 passi.", questions: ["Identifico i problemi precocemente?", "Qual è un problema tipico che affronto col 'tutto-o-nulla'?"] },
-  5: { title: "Step 5: Fare il bilancio", desc: "Valutare i progressi.", questions: ["Fare una dieta rigida contribuisce ancora alle abbuffate?", "Le preoccupazioni sul corpo contribuiscono al problema?", "Ci sono altri ostacoli che mi bloccano?"] },
-  6: { title: "Modulo: La Dieta", desc: "Affrontare la dieta rigida.", questions: ["Che cosa mangio tra un'abbuffata e l'altra?", "Le mie abbuffate si verificano se non rispetto le regole?", "Quali sono gli alimenti 'proibiti' da reintrodurre?"] },
-  7: { title: "Modulo: Immagine Corporea", desc: "L'eccessiva preoccupazione per la forma.", questions: ["Quanto spazio occupa il peso nel mio 'Grafico a Torta'?", "Uso dello specchio: quante volte mi guardo? Cerco difetti?", "Con quale tipo di persone mi confronto?", "Pratico l'evitamento del corpo?"] },
-  8: { title: "Step 8: Prevenzione", desc: "Mantenere i cambiamenti.", questions: ["Quali sono i miei segnali premonitori di una ricaduta?", "Qual è la differenza tra una 'scivolata' e una ricaduta?", "Cosa farò esattamente se avrò una scivolata?"] }
-};
-
-const reviewQuestionsByStep = {
-  1: { checks: ["Ho eseguito il monitoraggio in tempo reale?", "Mi sto pesando una SOLA volta alla settimana?", "Stanno emergendo dei pattern?"], text: [{ id: 'patterns', label: "Che cosa accomuna le mie abbuffate?" }] },
-  2: { checks: ["Pianifico pasti/spuntini regolari?", "Gli intervalli superano le 4 ore?", "Mangio tra un pasto e l'altro?", "Ritorno in carreggiata in fretta?"], text: [{ id: 'emotions', label: "Come affronto il senso di sazietà?" }] },
-  3: { checks: ["Registro gli impulsi appena arrivano?", "Faccio uso delle attività alternative?", "L'uso delle alternative può essere migliorato?"], text: [{ id: 'emotions', label: "Sono riuscita/o a far passare il picco dell'impulso?" }] },
-  4: { checks: ["Applico il problem solving?", "Lo faccio nel modo giusto (scrivendo i passi)?", "Analizzo a posteriori il mio problem solving?"], text: [{ id: 'emotions', label: "Ho identificato i problemi in tempo reale?" }] },
-  5: { checks: ["La dieta contribuisce ancora?", "Le preoccupazioni sul corpo contribuiscono?", "Ho deciso quale modulo affrontare ora?"], text: [{ id: 'emotions', label: "Qual è il mio prossimo passo?" }] },
-  6: { checks: ["Sto affrontando i ritardi nei pasti?", "Sto affrontando il limite calorico?", "Sto reintroducendo alimenti evitati?", "Sto affrontando il mangiare davanti agli altri?"], text: [{ id: 'emotions', label: "L'ansia per i cibi proibiti sta diminuendo?" }] },
-  7: { checks: ["Sto arricchendo il mio 'Grafico a Torta'?", "Sto affrontando il 'Controllo del corpo' (specchio)?", "Sto affrontando l'Evitamento del corpo?"], text: [{ id: 'emotions', label: "Come cambia la mia autostima?" }] },
-  8: { checks: ["Sto mantenendo un'alimentazione regolare?", "So riconoscere i miei segnali di allarme precoce?", "Sto applicando il mio piano d'azione in caso di 'scivolata'?"], text: [{ id: 'emotions', label: "Come mi sento a gestire le difficoltà ora rispetto all'inizio del percorso?" }] }
-};
-
-const EMOZIONI = ['Ansia', 'Noia', 'Tristezza', 'Solitudine', 'Rabbia', 'Soddisfazione', 'Stanchezza'];
-
-const themes = {
-  pink: { 
-    light: { bgMain: '#FCFAF8', bgCard: '#FFFFFF', bgInput: '#F6F4F7', textMain: '#4A4A4A', textMuted: '#9CA3AF', borderColor: '#F3F0F5', primary: '#E8B4B8', lightPrimary: '#FFF5F6', borderPrimary: '#FADBDD', textPrimary: '#D4787D', actPrimary: '#C2D8CD', actLight: '#F4F9F6', actBorder: '#E0EBE5', actText: '#71988A', sleepPrimary: '#B5A8D5', sleepLight: '#F7F5FA', sleepBorder: '#E2D9EA', sleepText: '#8E7AAB' },
-    dark:  { bgMain: '#2A2426', bgCard: '#362D30', bgInput: '#42383B', textMain: '#F0E6E8', textMuted: '#A89FA1', borderColor: '#4A3E41', primary: '#D4787D', lightPrimary: '#4D3639', borderPrimary: '#6E4D52', textPrimary: '#E8B4B8', actPrimary: '#71988A', actLight: '#2D3A35', actBorder: '#3E504A', actText: '#A8CBB8', sleepPrimary: '#8E7AAB', sleepLight: '#342D3B', sleepBorder: '#4D4357', sleepText: '#B5A8D5' }
-  },
-  aqua: { 
-    light: { bgMain: '#F4FAFA', bgCard: '#FFFFFF', bgInput: '#F0F5F5', textMain: '#4A4A4A', textMuted: '#9CA3AF', borderColor: '#EBF2F2', primary: '#8AC4BC', lightPrimary: '#F0FAF9', borderPrimary: '#C8EBE6', textPrimary: '#5E9C95', actPrimary: '#E8B4B8', actLight: '#FFF5F6', actBorder: '#FADBDD', actText: '#D4787D', sleepPrimary: '#A3C9D6', sleepLight: '#F2F8FA', sleepBorder: '#D5E7ED', sleepText: '#6A9C8D' },
-    dark:  { bgMain: '#1A2322', bgCard: '#24302E', bgInput: '#2F3D3B', textMain: '#E6F0EF', textMuted: '#8BA19E', borderColor: '#3A4D4A', primary: '#72A9A0', lightPrimary: '#263B38', borderPrimary: '#375752', textPrimary: '#8AC4BC', actPrimary: '#D4787D', actLight: '#4D3639', actBorder: '#6E4D52', actText: '#E8B4B8', sleepPrimary: '#6A9C8D', sleepLight: '#253331', sleepBorder: '#3A524D', sleepText: '#A3C9D6' }
-  },
-  lavender: { 
-    light: { bgMain: '#FBF9FC', bgCard: '#FFFFFF', bgInput: '#F4F0F7', textMain: '#4A4A4A', textMuted: '#9CA3AF', borderColor: '#EFEBF2', primary: '#CDB4DB', lightPrimary: '#FCF9FF', borderPrimary: '#EBDCF2', textPrimary: '#9B72AA', actPrimary: '#FFC8DD', actLight: '#FFF9FB', actBorder: '#FFE2ED', actText: '#D78FA9', sleepPrimary: '#A2D2FF', sleepLight: '#F5FBFF', sleepBorder: '#DCEFFF', sleepText: '#6BA8D6' },
-    dark:  { bgMain: '#231E26', bgCard: '#2E2733', bgInput: '#3A3240', textMain: '#EFE8F2', textMuted: '#9F92A3', borderColor: '#483E50', primary: '#B396C2', lightPrimary: '#382B42', borderPrimary: '#523E61', textPrimary: '#CDB4DB', actPrimary: '#D78FA9', actLight: '#47313A', actBorder: '#614350', actText: '#FFC8DD', sleepPrimary: '#6BA8D6', sleepLight: '#223445', sleepBorder: '#35526B', sleepText: '#A2D2FF' }
-  }
-};
-
-// --- FUNZIONI DI UTILITÀ GLOBALI ---
-const getTodayStr = () => new Date().toISOString().split('T')[0];
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  try {
-    return new Intl.DateTimeFormat('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
-  } catch (e) {
-    return dateStr;
-  }
-};
-
-const calculateStepEndDate = (currentStep, startDateStr) => {
-  if (!startDateStr) return null;
-  try {
-    const start = new Date(startDateStr);
-    const durations = { 1: 7, 2: 21, 3: 14, 4: 14, 5: 7, 6: 28, 7: 28, 8: 999 };
-    start.setDate(start.getDate() + (durations[currentStep] || 14));
-    return start.toISOString().split('T')[0];
-  } catch (e) {
-    return null;
-  }
-};
-
-// --- APP COMPONENT ---
-export default function App() {
-  // --- STATES ---
-  const [pin, setPin] = useState(() => {
-    const saved = localStorage.getItem('bed-diary-pin');
-    return saved === 'disabled' ? null : saved;
-  });
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem('bed-diary-pin') !== 'disabled');
-  const [selectedDate, setSelectedDate] = useState(getTodayStr());
-  const [entries, setEntries] = useState(() => JSON.parse(localStorage.getItem('bed-diary-entries') || '[]'));
-  const [weeklyReviews, setWeeklyReviews] = useState(() => JSON.parse(localStorage.getItem('bed-diary-reviews') || '[]'));
-  const [settings, setSettings] = useState(() => JSON.parse(localStorage.getItem('bed-diary-settings') || '{"isDark":false, "theme":"pink", "currentStep": 1, "stepStartDate": null, "pieChartValue": 50}'));
-  const [intros, setIntros] = useState(() => JSON.parse(localStorage.getItem('bed-diary-intros') || '{}'));
-  const [altActivities, setAltActivities] = useState(() => JSON.parse(localStorage.getItem('bed-diary-alt-activities') || '["Fare una passeggiata", "Ascoltare musica", "Chiamare un\'amica", "Fare un puzzle", "Bagno caldo"]'));
-  const [milestonesAchieved, setMilestonesAchieved] = useState(() => JSON.parse(localStorage.getItem('bed-diary-milestones') || '[]'));
-  
-  const [activeModal, setActiveModal] = useState(null); // 'add', 'settings', 'stats', 'review', 'alt', 'intro', 'milestone', 'bingeAnalysis'
-  const [editingIntroStep, setEditingIntroStep] = useState(null);
-  const [msToCelebrate, setMsToCelebrate] = useState(null);
-  const [bingeToAnalyze, setBingeToAnalyze] = useState(null);
-  const [toastMsg, setToastMsg] = useState("");
-  const [diaryFilter, setDiaryFilter] = useState('all');
-
-  // --- EFFECTS ---
-  useEffect(() => {
-    localStorage.setItem('bed-diary-entries', JSON.stringify(entries));
-    localStorage.setItem('bed-diary-reviews', JSON.stringify(weeklyReviews));
-    localStorage.setItem('bed-diary-settings', JSON.stringify(settings));
-    localStorage.setItem('bed-diary-intros', JSON.stringify(intros));
-    localStorage.setItem('bed-diary-alt-activities', JSON.stringify(altActivities));
-    localStorage.setItem('bed-diary-milestones', JSON.stringify(milestonesAchieved));
-  }, [entries, weeklyReviews, settings, intros, altActivities, milestonesAchieved]);
-
-  useEffect(() => {
-    if (!settings.stepStartDate) {
-      setSettings(prev => ({ ...prev, stepStartDate: getTodayStr() }));
-    }
-  }, [settings.stepStartDate]);
-
-  // Automatic Modals Checks
-  useEffect(() => {
-    if (isLocked) return;
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Diary</title>
     
-    // Check Intro
-    if (!intros[settings.currentStep] && activeModal === null) {
-      setActiveModal('intro');
-      return;
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#FCFAF8">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E8B4B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='5'/><path d='M12 1v2'/><path d='M12 21v2'/><path d='M4.22 4.22l1.42 1.42'/><path d='M18.36 18.36l1.42 1.42'/><path d='M1 12h2'/><path d='M21 12h2'/><path d='M4.22 19.78l1.42-1.42'/><path d='M18.36 4.22l1.42 1.42'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FCFAF8' stroke='%23E8B4B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='24' height='24' fill='%23FCFAF8' stroke='none'/><circle cx='12' cy='12' r='5'/><path d='M12 2v2'/><path d='M12 20v2'/><path d='M4.93 4.93l1.41 1.41'/><path d='M17.66 17.66l1.41 1.41'/><path d='M2 12h2'/><path d='M20 12h2'/><path d='M6.34 17.66l-1.41 1.41'/><path d='M19.07 4.93l-1.41 1.41'/></svg>">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0?external=react"
+        }
     }
+    </script>
 
-    // Check Milestones
-    const monitoredDates = [...new Set([...entries.map(e => e.date), ...weeklyReviews.map(r => r.date)])];
-    if (monitoredDates.length > 0) {
-      const reached = [...milestonesDef].reverse().find(m => monitoredDates.length >= m.target);
-      if (reached && !milestonesAchieved.some(m => m.target === reached.target) && activeModal === null) {
-        setMsToCelebrate(reached);
-        setActiveModal('milestone');
-      }
-    }
-  }, [isLocked, settings.currentStep, intros, entries, weeklyReviews, milestonesAchieved, activeModal]);
+    <style>
+        :root {
+            font-family: 'Nunito', sans-serif;
+            --bg-main: #FCFAF8; --bg-card: #FFFFFF; --bg-input: #F6F4F7;
+            --text-main: #4A4A4A; --text-muted: #9CA3AF; --border-color: #F3F0F5;
+            --theme-primary: #E8B4B8; --theme-light: #FFF5F6; --theme-border: #FADBDD; --theme-text: #D4787D;
+            --activity-primary: #C2D8CD; --activity-light: #F4F9F6; --activity-border: #E0EBE5; --activity-text: #71988A;
+            --sleep-primary: #B5A8D5; --sleep-light: #F7F5FA; --sleep-border: #E2D9EA; --sleep-text: #8E7AAB;
+        }
 
-  // --- HELPERS ---
-  const updateSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
-  
-  const showToast = (msg) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 3000);
-  };
+        body[data-theme="pink"][data-dark="false"] { --theme-primary: #E8B4B8; --theme-light: #FFF5F6; --theme-border: #FADBDD; --theme-text: #D4787D; --activity-primary: #C2D8CD; --activity-light: #F4F9F6; --activity-border: #E0EBE5; --activity-text: #71988A; --sleep-primary: #B5A8D5; --sleep-light: #F7F5FA; --sleep-border: #E2D9EA; --sleep-text: #8E7AAB; }
+        body[data-theme="pink"][data-dark="true"] { --bg-main: #2A2426; --bg-card: #362D30; --bg-input: #42383B; --text-main: #F0E6E8; --text-muted: #A89FA1; --border-color: #4A3E41; --theme-primary: #D4787D; --theme-light: #4D3639; --theme-border: #6E4D52; --theme-text: #E8B4B8; --activity-primary: #71988A; --activity-light: #2D3A35; --activity-border: #3E504A; --activity-text: #A8CBB8; --sleep-primary: #8E7AAB; --sleep-light: #342D3B; --sleep-border: #4D4357; --sleep-text: #B5A8D5;}
+        body[data-theme="aqua"][data-dark="false"] { --bg-main: #F4FAFA; --bg-card: #FFFFFF; --bg-input: #F0F5F5; --text-main: #4A4A4A; --text-muted: #9CA3AF; --border-color: #EBF2F2; --theme-primary: #8AC4BC; --theme-light: #F0FAF9; --theme-border: #C8EBE6; --theme-text: #5E9C95; --activity-primary: #E8B4B8; --activity-light: #FFF5F6; --activity-border: #FADBDD; --activity-text: #D4787D; --sleep-primary: #A3C9D6; --sleep-light: #F2F8FA; --sleep-border: #D5E7ED; --sleep-text: #6A9C8D;}
+        body[data-theme="aqua"][data-dark="true"] { --bg-main: #1A2322; --bg-card: #24302E; --bg-input: #2F3D3B; --text-main: #E6F0EF; --text-muted: #8BA19E; --border-color: #3A4D4A; --theme-primary: #72A9A0; --theme-light: #263B38; --theme-border: #375752; --theme-text: #8AC4BC; --activity-primary: #D4787D; --activity-light: #4D3639; --activity-border: #6E4D52; --activity-text: #E8B4B8; --sleep-primary: #6A9C8D; --sleep-light: #253331; --sleep-border: #3A524D; --sleep-text: #A3C9D6;}
+        body[data-theme="lavender"][data-dark="false"] { --bg-main: #FBF9FC; --bg-card: #FFFFFF; --bg-input: #F4F0F7; --text-main: #4A4A4A; --text-muted: #9CA3AF; --border-color: #EFEBF2; --theme-primary: #CDB4DB; --theme-light: #FCF9FF; --theme-border: #EBDCF2; --theme-text: #9B72AA; --activity-primary: #FFC8DD; --activity-light: #FFF9FB; --activity-border: #FFE2ED; --activity-text: #D78FA9; --sleep-primary: #A2D2FF; --sleep-light: #F5FBFF; --sleep-border: #DCEFFF; --sleep-text: #6BA8D6;}
+        body[data-theme="lavender"][data-dark="true"] { --bg-main: #231E26; --bg-card: #2E2733; --bg-input: #3A3240; --text-main: #EFE8F2; --text-muted: #9F92A3; --border-color: #483E50; --theme-primary: #B396C2; --theme-light: #382B42; --theme-border: #523E61; --theme-text: #CDB4DB; --activity-primary: #D78FA9; --activity-light: #47313A; --activity-border: #614350; --activity-text: #FFC8DD; --sleep-primary: #6BA8D6; --sleep-light: #223445; --sleep-border: #35526B; --sleep-text: #A2D2FF;}
 
-  const getCssVars = () => {
-    const t = themes[settings.theme] ? themes[settings.theme][settings.isDark ? 'dark' : 'light'] : themes['pink']['light'];
-    return {
-      '--bg-main': t.bgMain, '--bg-card': t.bgCard, '--bg-input': t.bgInput,
-      '--text-main': t.textMain, '--text-muted': t.textMuted, '--border-color': t.borderColor,
-      '--theme-primary': t.primary, '--theme-light': t.lightPrimary, '--theme-border': t.borderPrimary, '--theme-text': t.textPrimary,
-      '--activity-primary': t.actPrimary, '--activity-light': t.actLight, '--activity-border': t.actBorder, '--activity-text': t.actText,
-      '--sleep-primary': t.sleepPrimary, '--sleep-light': t.sleepLight, '--sleep-border': t.sleepBorder, '--sleep-text': t.sleepText,
-      backgroundColor: t.bgMain, color: t.textMain
-    };
-  };
-
-  // --- MAIN RENDER LOGIC ---
-  const isToday = selectedDate === getTodayStr();
-  const dayOfMonth = new Date(selectedDate).getDate() || 1;
-  const todayQuote = dailyQuotes[(dayOfMonth - 1) % dailyQuotes.length];
-
-  let filteredEntries = entries.filter(e => e.date === selectedDate);
-  const mealsCount = filteredEntries.filter(e => e.type === 'food' && e.isMeal).length;
-  const bingesCount = filteredEntries.filter(e => e.type === 'food' && e.lossOfControl).length;
-
-  if (diaryFilter === 'binges') filteredEntries = filteredEntries.filter(e => e.isExcessive || e.lossOfControl);
-  else if (diaryFilter === 'urges') filteredEntries = filteredEntries.filter(e => e.hadUrge);
-  else if (diaryFilter === 'sleep') filteredEntries = filteredEntries.filter(e => e.type === 'sleep');
-
-  const daysSinceStepStart = settings.stepStartDate ? Math.floor((new Date() - new Date(settings.stepStartDate)) / (1000 * 60 * 60 * 24)) : 0;
-  let suggestedStep = null;
-  if (settings.currentStep === 1 && daysSinceStepStart >= 7) suggestedStep = 2;
-  else if (settings.currentStep === 2 && daysSinceStepStart >= 21) suggestedStep = 3;
-  else if (settings.currentStep === 3 && daysSinceStepStart >= 14) suggestedStep = 4;
-  else if (settings.currentStep === 4 && daysSinceStepStart >= 14) suggestedStep = 5;
-  else if (settings.currentStep === 5 && daysSinceStepStart >= 7) suggestedStep = 6;
-  else if (settings.currentStep === 6 && daysSinceStepStart >= 28) suggestedStep = 7;
-  else if (settings.currentStep === 7 && daysSinceStepStart >= 28) suggestedStep = 8;
-
-  if (isLocked) {
-    return <LockScreen pin={pin} onUnlock={() => setIsLocked(false)} onSetPin={(p) => { setPin(p); localStorage.setItem('bed-diary-pin', p); setIsLocked(false); }} cssVars={getCssVars()} />;
-  }
-
-  return (
-    <div style={getCssVars()} className="min-h-[100dvh] pb-[calc(6rem+env(safe-area-inset-bottom))] transition-colors duration-300 font-sans">
-      {/* Toast */}
-      {toastMsg && (
-        <div className="fixed bottom-24 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-300">
-          <div className="bg-[var(--bg-main)] border-2 border-[var(--theme-primary)] text-[var(--text-main)] px-6 py-3 rounded-full shadow-lg flex items-center gap-2 font-bold text-sm">
-            <Sparkles className="w-5 h-5 text-[var(--theme-primary)]" /> {toastMsg}
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <header className="pt-10 pb-4 px-6 max-w-2xl mx-auto relative sticky top-0 bg-[var(--bg-main)]/95 backdrop-blur-md z-20 border-b border-[var(--border-color)]/50">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-serif tracking-tight">Diary</h1>
-          <button onClick={() => setActiveModal('settings')} className="p-2 bg-[var(--bg-card)] text-[var(--text-muted)] border border-[var(--border-color)] rounded-full hover:opacity-80 shadow-sm"><Settings className="w-5 h-5" /></button>
-        </div>
+        body { margin: 0; padding: 0; background-color: var(--bg-main); color: var(--text-main); transition: background-color 0.3s ease, color 0.3s ease; -webkit-tap-highlight-color: transparent;}
+        .font-serif { font-family: 'Lora', serif; }
         
-        <div className="flex items-center justify-between bg-[var(--bg-card)] p-2 rounded-2xl shadow-sm border border-[var(--border-color)]">
-          <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate()-1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-2 bg-[var(--bg-input)] rounded-xl hover:opacity-80 text-[var(--text-muted)]"><ChevronLeft className="w-5 h-5" /></button>
-          <div className="text-center">
-            <p className="text-[var(--text-main)] font-bold capitalize text-sm">{formatDate(selectedDate)}</p>
-            {!isToday && <p className="text-[10px] text-[var(--theme-primary)] font-bold mt-0.5 uppercase tracking-wider">Passato</p>}
-          </div>
-          <button onClick={() => { if(!isToday){ const d = new Date(selectedDate); d.setDate(d.getDate()+1); setSelectedDate(d.toISOString().split('T')[0]); } }} className={`p-2 rounded-xl text-[var(--text-muted)] bg-[var(--bg-input)] hover:opacity-80 ${isToday?'opacity-30':''}`}><ChevronRight className="w-5 h-5" /></button>
-        </div>
-      </header>
+        ::-webkit-scrollbar { width: 6px; } 
+        ::-webkit-scrollbar-track { background: transparent; } 
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        
+        .modal-enter { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .pie-chart { width: 140px; height: 140px; border-radius: 50%; background: conic-gradient(var(--theme-primary) 0% var(--pie-val), var(--bg-input) var(--pie-val) 100%); box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 4px solid var(--bg-card); transition: background 0.3s ease; }
+        .pb-safe { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+        .nav-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-      <div className="px-6 max-w-2xl mx-auto mt-6">
-        <div className="mb-6 bg-[var(--theme-light)] p-5 rounded-[2.5rem] shadow-sm border border-[var(--theme-border)] relative overflow-hidden">
-          <Sun className="absolute -top-2 -right-2 w-16 h-16 text-[var(--theme-primary)] opacity-20" />
-          <p className="text-[var(--theme-text)] font-medium text-lg italic leading-relaxed relative z-10 text-center">"{todayQuote}"</p>
-        </div>
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+          Plus, Clock, MapPin, BookOpen, Star, 
+          Utensils, X, Heart, Sparkles, CalendarDays,
+          Trophy, Flame, Award, Activity, Timer, ArrowRight,
+          Settings, Download, Upload, Moon, Sun, Palette,
+          CheckCircle2, ListTodo, Smile, Meh, Frown,
+          ChevronLeft, ChevronRight, BookText, ChevronDown, ChevronUp,
+          Lock, Unlock, Lightbulb, Trash2, Zap, AlertTriangle, AlertCircle, Search
+        } from 'lucide-react';
 
-        {suggestedStep && isToday && (
-          <div className="mb-6 bg-[var(--activity-light)] p-4 rounded-2xl shadow-sm border border-[var(--activity-border)] flex items-center justify-between">
-            <div className="flex flex-col"><span className="font-bold text-sm text-[var(--activity-text)]">Tempo di bilancio!</span><span className="text-xs text-[var(--text-main)] opacity-80 mt-1">Sei pronta/o per lo Step {suggestedStep}?</span></div>
-            <button onClick={() => { updateSetting('currentStep', suggestedStep); updateSetting('stepStartDate', getTodayStr()); }} className="bg-[var(--activity-primary)] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">Inizia</button>
-          </div>
-        )}
+        // --- FUNZIONI GLOBALI (Spostate in alto per evitare errori di Reference) ---
+        function getTodayStr() {
+          return new Date().toISOString().split('T')[0];
+        }
 
-        <div className="flex justify-between items-center bg-[var(--bg-card)] p-4 rounded-[2.5rem] border border-[var(--border-color)] shadow-sm mb-6">
-          <div className="flex-1 text-center border-r border-[var(--border-color)]"><p className="text-2xl font-black">{mealsCount}</p><p className="text-[9px] uppercase font-bold text-[var(--text-muted)]">Pasti</p></div>
-          <div className="flex-1 text-center border-r border-[var(--border-color)]"><p className="text-2xl font-black">{entries.filter(e=>e.date===selectedDate).length}</p><p className="text-[9px] uppercase font-bold text-[var(--text-muted)]">Log</p></div>
-          <div className="flex-1 text-center"><p className={`text-2xl font-black ${bingesCount > 0 ? 'text-red-400' : ''}`}>{bingesCount}</p><p className="text-[9px] uppercase font-bold text-[var(--text-muted)]">Abbuffate</p></div>
-        </div>
+        function formatDate(dateStr) {
+          if (!dateStr) return '';
+          try {
+            return new Intl.DateTimeFormat('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
+          } catch (e) {
+            return dateStr;
+          }
+        }
 
-        <div className="mb-4 flex items-center gap-2 bg-[var(--bg-input)] p-2 rounded-xl border border-[var(--border-color)] w-fit">
-          <ListTodo className="w-4 h-4 text-[var(--text-muted)]" />
-          <select value={diaryFilter} onChange={e => setDiaryFilter(e.target.value)} className="bg-transparent text-xs sm:text-sm text-[var(--text-muted)] font-bold outline-none cursor-pointer">
-            <option value="all">Tutto il diario</option>
-            <option value="binges">Solo Abbuffate / Eccessi</option>
-            <option value="urges">Solo Impulsi</option>
-            <option value="sleep">Solo Sonno</option>
-          </select>
-        </div>
+        function calculateStepEndDate(currentStep, startDateStr) {
+          if (!startDateStr) return null;
+          try {
+            const start = new Date(startDateStr);
+            const durations = { 1: 7, 2: 21, 3: 14, 4: 14, 5: 7, 6: 28, 7: 28, 8: 999 };
+            start.setDate(start.getDate() + (durations[currentStep] || 14));
+            return start.toISOString().split('T')[0];
+          } catch (e) {
+            return null;
+          }
+        }
 
-        <main className="relative pb-24">
-          {filteredEntries.length === 0 ? (
-             <div className="text-center py-20 opacity-50"><Heart className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" /><p className="font-bold">Nessun dato.</p></div>
-          ) : (
-            <>
-              <div className="absolute left-[26px] top-6 bottom-6 w-0.5 bg-[var(--border-color)] z-0"></div>
-              {filteredEntries.map((entry, idx) => (
-                <EntryCard 
-                  key={entry.id} entry={entry} 
-                  prevEntry={idx > 0 ? filteredEntries[idx-1] : null}
-                  currentStep={settings.currentStep}
-                  onAnalyze={() => { setBingeToAnalyze(entry); setActiveModal('bingeAnalysis'); }}
-                />
-              ))}
-            </>
-          )}
-        </main>
-      </div>
+        // --- COSTANTI E DATI ---
+        const dailyQuotes = [
+          "In my healing era. 🦋✨", "Long story short, I survived. 🍂", "Protect your peace. ☁️",
+          "You are the main character. 💅", "Doing it for 'future me'. 🤍", "Small habits, big changes. 🌿",
+          "Your worth is not measured by your productivity.", "Breathe in, breathe through, breathe deep, breathe out. 🌬️",
+          "Letting go of what no longer serves me. 🕊️", "Glow up internally first. 💫", "Note to self: I am doing enough.",
+          "Step into the daylight and let it go. ☀️", "You are art, treat yourself like it. 🖼️", "Manifesting a healthy mind. 🧿",
+          "Fueling my body, feeding my soul. 🍵", "It's okay to rest. You're not falling behind. 🛌☁️", "You're on your own, kid. 💫",
+          "Healing is the best glow-up. ✨", "Be the energy you want to attract. 🌸", "Taking my power back, one day at a time.",
+          "Soft girl era: resting, healing, growing. 🎀", "I wanna be defined by the things that I love. 💖", "Create a life that feels good on the inside. 🤍",
+          "Growth is uncomfortable, but so is staying stuck. 🌱", "Protecting my energy > everything else.", "A new beginning. ✨",
+          "Trust the timing of your life. 🕰️", "Be a safe space for yourself. 🏡", "I am learning to love the process.", "I'm doing better than I ever was. 🌷"
+        ];
 
-      {/* BOTTOM NAV */}
-      <nav className="fixed bottom-0 left-0 w-full bg-[var(--bg-card)] border-t border-[var(--border-color)] shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-40" style={{paddingBottom: 'env(safe-area-inset-bottom)'}}>
-        <div className="max-w-2xl mx-auto flex justify-around items-center h-[75px] relative px-2">
-          <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} className="flex flex-col items-center gap-1.5 text-[var(--theme-primary)] p-2"><CalendarDays className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-wider">Diario</span></button>
-          {settings.currentStep >= 3 ? (
-            <button onClick={() => setActiveModal('alt')} className="flex flex-col items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] p-2"><Lightbulb className="w-6 h-6" /><span className="text-[10px] font-bold uppercase tracking-wider">Idee</span></button>
-          ) : <div className="w-14"></div>}
-          <div className="relative -top-6">
-            <button onClick={() => setActiveModal('add')} className="flex items-center justify-center w-16 h-16 bg-[var(--theme-primary)] text-white rounded-full shadow-xl transform hover:scale-105 active:scale-95 transition-all ring-4 ring-[var(--bg-main)]"><Plus className="w-8 h-8" /></button>
-          </div>
-          <button onClick={() => setActiveModal('review')} className="flex flex-col items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] p-2"><CheckCircle2 className="w-6 h-6" /><span className="text-[10px] font-bold uppercase tracking-wider">Review</span></button>
-          <button onClick={() => setActiveModal('stats')} className="flex flex-col items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] p-2"><Award className="w-6 h-6" /><span className="text-[10px] font-bold uppercase tracking-wider">Meta</span></button>
-        </div>
-      </nav>
+        const milestonesDef = [
+          { target: 1, title: 'Primi Passi', desc: '1° giorno di monitoraggio.', quote: "Ogni viaggio inizia con un singolo passo. Fiera di te. ✨" },
+          { target: 3, title: 'Costanza', desc: '3 giorni di consapevolezza.', quote: "It’s been a long time coming. Stai andando benissimo! 🌸" },
+          { target: 7, title: 'Una Settimana', desc: '7 giorni consecutivi.', quote: "Sette giorni di cura verso te stessa. Proteggi questa energia. ☁️" },
+          { target: 30, title: 'Un Mese Intero', desc: '30 giorni di dedizione.', quote: "I had the time of my life fighting dragons with you. 🐉✨" },
+          { target: 90, title: 'Tre Mesi', desc: '90 giorni. Nuova stagione.', quote: "You are the best thing that's ever been mine. 🤍" },
+          { target: 180, title: 'Sei Mesi', desc: 'Metà anno.', quote: "Long story short, I survived. Guarda quanto sei andata lontano! 🍂" },
+          { target: 365, title: 'Un Anno', desc: '365 giorni di rinascita.', quote: "Step into the daylight and let it go. Hai trasformato la tua vita. ☀️" }
+        ];
 
-      {/* MODALS */}
-      {activeModal === 'add' && <AddEntryModal selectedDate={selectedDate} currentStep={settings.currentStep} altActivities={altActivities} onClose={() => setActiveModal(null)} onSave={(e) => { setEntries([...entries, e].sort((a,b)=>a.time.localeCompare(b.time))); setActiveModal(null); showToast("Registrato!"); }} />}
-      {activeModal === 'settings' && <SettingsModal settings={settings} updateSetting={updateSetting} entries={entries} setEntries={setEntries} userPin={pin} removePin={() => setPin(null)} onClose={() => setActiveModal(null)} />}
-      {activeModal === 'alt' && <AltActivitiesModal altActivities={altActivities} setAltActivities={setAltActivities} onClose={() => setActiveModal(null)} />}
-      {activeModal === 'review' && <WeeklyReviewModal selectedDate={selectedDate} currentStep={settings.currentStep} onClose={() => setActiveModal(null)} onSave={(rev) => { setWeeklyReviews([...weeklyReviews, { ...rev, id: Date.now(), date: selectedDate, step: settings.currentStep }]); setActiveModal(null); showToast("Revisione salvata!"); }} />}
-      {activeModal === 'stats' && <StatsModal settings={settings} updateSetting={updateSetting} entries={entries} weeklyReviews={weeklyReviews} intros={intros} milestonesAchieved={milestonesAchieved} onClose={() => setActiveModal(null)} onEditIntro={(step) => { setEditingIntroStep(step); setActiveModal('intro_edit'); }} />}
-      {activeModal === 'intro' && <IntroStepModal step={settings.currentStep} onClose={(ans) => { setIntros({...intros, [settings.currentStep]: {date: getTodayStr(), answers: ans}}); setActiveModal(null); }} />}
-      {activeModal === 'intro_edit' && <IntroStepModal step={editingIntroStep} isEditing={true} initialAnswers={intros[editingIntroStep]?.answers || {}} onClose={(ans) => { setIntros({...intros, [editingIntroStep]: {date: intros[editingIntroStep]?.date || getTodayStr(), answers: ans}}); setActiveModal('stats'); }} onCancel={() => setActiveModal('stats')} />}
-      {activeModal === 'milestone' && <MilestoneModal milestone={msToCelebrate} onClose={(res) => { setMilestonesAchieved([...milestonesAchieved, res]); setActiveModal(null); setMsToCelebrate(null); }} />}
-      {activeModal === 'bingeAnalysis' && bingeToAnalyze && <BingeAnalysisModal entry={bingeToAnalyze} onClose={() => setActiveModal(null)} onSave={(analysis) => { const updated = entries.map(e => e.id === bingeToAnalyze.id ? {...e, analysis} : e); setEntries(updated); setActiveModal(null); showToast("Analisi salvata."); }} />}
-    </div>
-  );
-}
+        const introQuestionsByStep = {
+          1: { title: "Preparazione", desc: "Perché cambiare?", questions: ["Se smetto di abbuffarmi: starò meglio?", "Quanti anni ho passato ad abbuffarmi?", "Quanto tempo mi ha portato via?", "Quanti soldi ho speso inutilmente?", "Ho adattato la mia vita alle abbuffate?"] },
+          2: { title: "Step 2: Regolarità", desc: "Strutturare 3 pasti e 2 o 3 spuntini.", questions: ["Quali ostacoli pratici prevedo?", "Come mi sento all'idea di dover fare pasti senza fame?", "Ho dei cibi 'al sicuro' per iniziare?"] },
+          3: { title: "Step 3: Alternative", desc: "Pianificare attività per l'ora di picco.", questions: ["Quali sono le attività ATTIVE che posso fare?", "Quali attività PIACEVOLI posso fare?", "Quale musica posso preparare?"] },
+          4: { title: "Step 4: Problem Solving", desc: "Imparare i 6 passi.", questions: ["Identifico i problemi precocemente?", "Qual è un problema tipico che affronto col 'tutto-o-nulla'?"] },
+          5: { title: "Step 5: Fare il bilancio", desc: "Valutare i progressi.", questions: ["Fare una dieta rigida contribuisce ancora alle abbuffate?", "Le preoccupazioni sul corpo contribuiscono al problema?", "Ci sono altri ostacoli che mi bloccano?"] },
+          6: { title: "Modulo: La Dieta", desc: "Affrontare la dieta rigida.", questions: ["Che cosa mangio tra un'abbuffata e l'altra?", "Le mie abbuffate si verificano se non rispetto le regole?", "Quali sono gli alimenti 'proibiti' da reintrodurre?"] },
+          7: { title: "Modulo: Immagine Corporea", desc: "L'eccessiva preoccupazione per la forma.", questions: ["Quanto spazio occupa il peso nel mio 'Grafico a Torta'?", "Uso dello specchio: quante volte mi guardo? Cerco difetti?", "Con quale tipo di persone mi confronto?", "Pratico l'evitamento del corpo?"] },
+          8: { title: "Step 8: Prevenzione", desc: "Mantenere i cambiamenti.", questions: ["Quali sono i miei segnali premonitori di una ricaduta?", "Qual è la differenza tra una 'scivolata' e una ricaduta?", "Cosa farò esattamente se avrò una scivolata?"] }
+        };
 
-// --- SUB-COMPONENTS ---
+        const reviewQuestionsByStep = {
+          1: { checks: ["Ho eseguito il monitoraggio in tempo reale?", "Mi sto pesando una SOLA volta alla settimana?", "Stanno emergendo dei pattern?"], text: [{ id: 'patterns', label: "Che cosa accomuna le mie abbuffate?" }] },
+          2: { checks: ["Pianifico pasti/spuntini regolari?", "Gli intervalli superano le 4 ore?", "Mangio tra un pasto e l'altro?", "Ritorno in carreggiata in fretta?"], text: [{ id: 'emotions', label: "Come affronto il senso di sazietà?" }] },
+          3: { checks: ["Registro gli impulsi appena arrivano?", "Faccio uso delle attività alternative?", "L'uso delle alternative può essere migliorato?"], text: [{ id: 'emotions', label: "Sono riuscita/o a far passare il picco dell'impulso?" }] },
+          4: { checks: ["Applico il problem solving?", "Lo faccio nel modo giusto (scrivendo i passi)?", "Analizzo a posteriori il mio problem solving?"], text: [{ id: 'emotions', label: "Ho identificato i problemi in tempo reale?" }] },
+          5: { checks: ["La dieta contribuisce ancora?", "Le preoccupazioni sul corpo contribuiscono?", "Ho deciso quale modulo affrontare ora?"], text: [{ id: 'emotions', label: "Qual è il mio prossimo passo?" }] },
+          6: { checks: ["Sto affrontando i ritardi nei pasti?", "Sto affrontando il limite calorico?", "Sto reintroducendo alimenti evitati?", "Sto affrontando il mangiare davanti agli altri?"], text: [{ id: 'emotions', label: "L'ansia per i cibi proibiti sta diminuendo?" }] },
+          7: { checks: ["Sto arricchendo il mio 'Grafico a Torta'?", "Sto affrontando il 'Controllo del corpo' (specchio)?", "Sto affrontando l'Evitamento del corpo?"], text: [{ id: 'emotions', label: "Come cambia la mia autostima?" }] },
+          8: { checks: ["Sto mantenendo un'alimentazione regolare?", "So riconoscere i miei segnali di allarme precoce?", "Sto applicando il mio piano d'azione in caso di 'scivolata'?"], text: [{ id: 'emotions', label: "Come mi sento a gestire le difficoltà ora rispetto all'inizio del percorso?" }] }
+        };
 
-function LockScreen({ pin, onUnlock, onSetPin, cssVars }) {
-  const [input, setInput] = useState('');
-  const [error, setError] = useState(false);
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if(input.length !== 4) return;
-    if(!pin) onSetPin(input);
-    else if(pin === input) onUnlock();
-    else { setError(true); setInput(''); }
-  };
-  const handleSkip = () => {
-    localStorage.setItem('bed-diary-pin', 'disabled');
-    onUnlock();
-  };
-  return (
-    <div style={cssVars} className="fixed inset-0 z-[100] bg-[var(--bg-main)] flex items-center justify-center p-4 min-h-[100dvh]">
-      <div className="bg-[var(--bg-card)] p-6 sm:p-8 rounded-[2.5rem] shadow-xl max-w-sm w-full text-center border border-[var(--border-color)]">
-        <div className="w-20 h-20 mx-auto bg-[var(--theme-light)] rounded-full flex items-center justify-center mb-6">
-          <Lock className="w-10 h-10 text-[var(--theme-primary)]" />
-        </div>
-        <h1 className="text-3xl font-serif text-[var(--text-main)] mb-2">Diary</h1>
-        <p className="text-[var(--text-muted)] mb-8 text-sm leading-relaxed">{pin ? 'Bentornata/o. Inserisci il PIN per entrare nel tuo spazio.' : 'Imposta un PIN di 4 cifre per proteggere il tuo diario.'}</p>
-        <form onSubmit={handleSubmit}>
-          <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={input} onChange={e => {setInput(e.target.value.replace(/\D/g,'')); setError(false);}} placeholder="••••" className={`w-full text-center text-[2.5rem] tracking-[0.5em] p-4 bg-[var(--bg-input)] rounded-2xl outline-none border ${error?'border-red-400':'border-[var(--border-color)] focus:ring-2 focus:ring-[var(--theme-primary)]'} text-[var(--text-main)] mb-2 h-20`} />
-          {error && <p className="text-red-400 text-xs font-bold mt-2 animate-bounce">PIN errato. Riprova.</p>}
-          <button type="submit" disabled={input.length!==4} className="w-full mt-6 py-4 bg-[var(--theme-primary)] text-white font-extrabold tracking-widest text-sm rounded-2xl hover:opacity-90 disabled:opacity-50 uppercase shadow-md active:scale-95 transition-all">Entra</button>
-        </form>
-        {!pin && (
-          <button onClick={handleSkip} className="mt-6 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--theme-text)] underline decoration-2 underline-offset-4 p-2">Continua senza PIN</button>
-        )}
-      </div>
-    </div>
-  );
-}
+        const EMOZIONI = ['Ansia', 'Noia', 'Tristezza', 'Solitudine', 'Rabbia', 'Soddisfazione', 'Stanchezza'];
 
-function EntryCard({ entry, prevEntry, currentStep, onAnalyze }) {
-  const isBinge = entry.lossOfControl;
-  const isSleep = entry.type === 'sleep';
-  const isAct = entry.type === 'activity';
-  
-  let bg = isBinge ? 'bg-[var(--theme-light)] border-[var(--theme-border)] shadow-sm' : isSleep ? 'bg-[var(--sleep-light)] border-[var(--sleep-border)]' : isAct ? 'bg-[var(--activity-light)] border-[var(--activity-border)]' : 'bg-[var(--bg-card)] border-[var(--border-color)]';
-  let dot = isBinge ? 'bg-[var(--theme-primary)]' : isSleep ? 'bg-[var(--sleep-primary)]' : isAct ? 'bg-[var(--activity-primary)]' : 'bg-[var(--text-muted)] opacity-30';
+        const themes = {
+          pink: { 
+            light: { bgMain: '#FCFAF8', bgCard: '#FFFFFF', bgInput: '#F6F4F7', textMain: '#4A4A4A', textMuted: '#9CA3AF', borderColor: '#F3F0F5', primary: '#E8B4B8', lightPrimary: '#FFF5F6', borderPrimary: '#FADBDD', textPrimary: '#D4787D', actPrimary: '#C2D8CD', actLight: '#F4F9F6', actBorder: '#E0EBE5', actText: '#71988A', sleepPrimary: '#B5A8D5', sleepLight: '#F7F5FA', sleepBorder: '#E2D9EA', sleepText: '#8E7AAB' },
+            dark:  { bgMain: '#2A2426', bgCard: '#362D30', bgInput: '#42383B', textMain: '#F0E6E8', textMuted: '#A89FA1', borderColor: '#4A3E41', primary: '#D4787D', lightPrimary: '#4D3639', borderPrimary: '#6E4D52', textPrimary: '#E8B4B8', actPrimary: '#71988A', actLight: '#2D3A35', actBorder: '#3E504A', actText: '#A8CBB8', sleepPrimary: '#8E7AAB', sleepLight: '#342D3B', sleepBorder: '#4D4357', sleepText: '#B5A8D5' }
+          },
+          aqua: { 
+            light: { bgMain: '#F4FAFA', bgCard: '#FFFFFF', bgInput: '#F0F5F5', textMain: '#4A4A4A', textMuted: '#9CA3AF', borderColor: '#EBF2F2', primary: '#8AC4BC', lightPrimary: '#F0FAF9', borderPrimary: '#C8EBE6', textPrimary: '#5E9C95', actPrimary: '#E8B4B8', actLight: '#FFF5F6', actBorder: '#FADBDD', actText: '#D4787D', sleepPrimary: '#A3C9D6', sleepLight: '#F2F8FA', sleepBorder: '#D5E7ED', sleepText: '#6A9C8D' },
+            dark:  { bgMain: '#1A2322', bgCard: '#24302E', bgInput: '#2F3D3B', textMain: '#E6F0EF', textMuted: '#8BA19E', borderColor: '#3A4D4A', primary: '#72A9A0', lightPrimary: '#263B38', borderPrimary: '#375752', textPrimary: '#8AC4BC', actPrimary: '#D4787D', actLight: '#4D3639', actBorder: '#6E4D52', actText: '#E8B4B8', sleepPrimary: '#6A9C8D', sleepLight: '#253331', sleepBorder: '#3A524D', sleepText: '#A3C9D6' }
+          },
+          lavender: { 
+            light: { bgMain: '#FBF9FC', bgCard: '#FFFFFF', bgInput: '#F4F0F7', textMain: '#4A4A4A', textMuted: '#9CA3AF', borderColor: '#EFEBF2', primary: '#CDB4DB', lightPrimary: '#FCF9FF', borderPrimary: '#EBDCF2', textPrimary: '#9B72AA', actPrimary: '#FFC8DD', actLight: '#FFF9FB', actBorder: '#FFE2ED', actText: '#D78FA9', sleepPrimary: '#A2D2FF', sleepLight: '#F5FBFF', sleepBorder: '#DCEFFF', sleepText: '#6BA8D6' },
+            dark:  { bgMain: '#231E26', bgCard: '#2E2733', bgInput: '#3A3240', textMain: '#EFE8F2', textMuted: '#9F92A3', borderColor: '#483E50', primary: '#B396C2', lightPrimary: '#382B42', borderPrimary: '#523E61', textPrimary: '#CDB4DB', actPrimary: '#D78FA9', actLight: '#47313A', actBorder: '#614350', actText: '#FFC8DD', sleepPrimary: '#6BA8D6', sleepLight: '#223445', sleepBorder: '#35526B', sleepText: '#A2D2FF' }
+          }
+        };
 
-  let gapWarning = false;
-  if (!isAct && !isSleep && prevEntry && !prevEntry.type?.includes('sleep') && !prevEntry.type?.includes('activity')) {
-    const t1 = new Date(`2000-01-01T${prevEntry.time}`); const t2 = new Date(`2000-01-01T${entry.time}`);
-    if ((t2 - t1) / (1000 * 60 * 60) > 4) gapWarning = true;
-  }
+        // --- APP COMPONENT ---
+        function App() {
+          const [pin, setPin] = useState(() => {
+            const saved = localStorage.getItem('bed-diary-pin');
+            return saved === 'disabled' ? null : saved;
+          });
+          const [isLocked, setIsLocked] = useState(() => localStorage.getItem('bed-diary-pin') && localStorage.getItem('bed-diary-pin') !== 'disabled');
+          const [selectedDate, setSelectedDate] = useState(getTodayStr());
+          const [entries, setEntries] = useState(() => JSON.parse(localStorage.getItem('bed-diary-entries') || '[]'));
+          const [weeklyReviews, setWeeklyReviews] = useState(() => JSON.parse(localStorage.getItem('bed-diary-reviews') || '[]'));
+          const [settings, setSettings] = useState(() => JSON.parse(localStorage.getItem('bed-diary-settings') || '{"isDark":false, "theme":"pink", "currentStep": 1, "stepStartDate": null, "pieChartValue": 50}'));
+          const [intros, setIntros] = useState(() => JSON.parse(localStorage.getItem('bed-diary-intros') || '{}'));
+          const [altActivities, setAltActivities] = useState(() => JSON.parse(localStorage.getItem('bed-diary-alt-activities') || '["Fare una passeggiata", "Ascoltare musica", "Chiamare un\'amica", "Fare un puzzle", "Bagno caldo"]'));
+          const [milestonesAchieved, setMilestonesAchieved] = useState(() => JSON.parse(localStorage.getItem('bed-diary-milestones') || '[]'));
+          
+          const [activeModal, setActiveModal] = useState(null); 
+          const [editingIntroStep, setEditingIntroStep] = useState(null);
+          const [msToCelebrate, setMsToCelebrate] = useState(null);
+          const [bingeToAnalyze, setBingeToAnalyze] = useState(null);
+          const [toastMsg, setToastMsg] = useState("");
+          const [diaryFilter, setDiaryFilter] = useState('all');
 
-  return (
-    <div className="relative pl-14 mb-8 z-10 animate-in slide-in-from-bottom-2">
-      {gapWarning && <div className="absolute -top-6 left-12 text-[10px] font-bold text-[var(--theme-primary)] flex items-center gap-1 opacity-70"><AlertCircle className="w-3 h-3" /> Intervallo &gt; 4h</div>}
-      <div className={`absolute left-[19px] top-4 w-4 h-4 rounded-full ${dot} border-4 border-[var(--bg-main)] shadow-sm`}></div>
-      <div className={`border p-5 rounded-[2.2rem] ${bg}`}>
-        <div className="flex justify-between items-start mb-4">
-          <span className="text-xs font-black text-[var(--text-main)] bg-[var(--bg-main)]/50 px-2 py-1 rounded-lg">{entry.time}</span>
-          <div className="flex gap-1 flex-wrap justify-end">
-            {entry.isMeal && <span className="text-[9px] font-bold uppercase bg-white/50 px-2 py-1 rounded-md text-[var(--text-main)]">( PASTO )</span>}
-            {isBinge && entry.isExcessive && <span className="text-[9px] font-bold uppercase bg-red-400 text-white px-2 py-1 rounded-md shadow-sm">Binge O</span>}
-            {isBinge && !entry.isExcessive && <span className="text-[9px] font-bold uppercase bg-red-300 text-white px-2 py-1 rounded-md shadow-sm">Binge S</span>}
-            {!isBinge && entry.isExcessive && <span className="text-[9px] font-bold uppercase bg-[var(--theme-border)] text-[var(--theme-text)] px-2 py-1 rounded-md shadow-sm">Eccesso</span>}
-            {isAct && entry.duration && <span className="text-[9px] font-bold bg-[var(--activity-border)] text-[var(--activity-text)] px-2 py-1 rounded-md">{entry.duration}</span>}
-          </div>
-        </div>
+          useEffect(() => {
+            localStorage.setItem('bed-diary-entries', JSON.stringify(entries));
+            localStorage.setItem('bed-diary-reviews', JSON.stringify(weeklyReviews));
+            localStorage.setItem('bed-diary-settings', JSON.stringify(settings));
+            localStorage.setItem('bed-diary-intros', JSON.stringify(intros));
+            localStorage.setItem('bed-diary-alt-activities', JSON.stringify(altActivities));
+            localStorage.setItem('bed-diary-milestones', JSON.stringify(milestonesAchieved));
+          }, [entries, weeklyReviews, settings, intros, altActivities, milestonesAchieved]);
 
-        <div className="mb-2">
-          <p className="text-lg font-bold text-[var(--text-main)] leading-tight">
-            {isSleep ? (entry.sleepType==='wake'?'Sveglia ☀️':'A letto 🌙') : isAct ? entry.activityName : (entry.isMeal ? `( ${entry.food} )` : entry.food)}
-            {entry.isExcessive && <span className="text-[var(--theme-primary)] ml-1">***</span>}
-          </p>
-          {isSleep && <p className="text-xs font-bold text-[var(--sleep-text)]/70 mt-1 uppercase">Qualità: {entry.sleepQuality || '-'}/5</p>}
-          {!isSleep && !isAct && entry.location && <p className="text-xs text-[var(--text-muted)] mb-3 italic">📍 {entry.location}</p>}
-        </div>
+          useEffect(() => {
+            if (!settings.stepStartDate) {
+              setSettings(prev => ({ ...prev, stepStartDate: getTodayStr() }));
+            }
+          }, [settings.stepStartDate]);
 
-        {currentStep >= 3 && entry.hadUrge && (
-          <div className="mb-4 p-3 bg-white/60 rounded-2xl border border-[var(--theme-border)] text-xs">
-            <p className="font-bold text-[var(--theme-text)] uppercase mb-1">Impulso affrontato</p>
-            <p className="italic text-[var(--text-muted)] whitespace-pre-line">"{entry.urgeBoxContent||'Nessuna nota'}"</p>
-            {entry.altActivityUsed && <p className="mt-2 font-bold text-[var(--text-main)]">💡 {entry.altActivityUsed}</p>}
-          </div>
-        )}
+          useEffect(() => {
+            if (isLocked) return;
+            if (!intros[settings.currentStep] && activeModal === null) {
+              setActiveModal('intro');
+              return;
+            }
+            const monitoredDates = [...new Set([...entries.map(e => e.date), ...weeklyReviews.map(r => r.date)])];
+            if (monitoredDates.length > 0) {
+              const reached = [...milestonesDef].reverse().find(m => monitoredDates.length >= m.target);
+              if (reached && !milestonesAchieved.some(m => m.target === reached.target) && activeModal === null) {
+                setMsToCelebrate(reached);
+                setActiveModal('milestone');
+              }
+            }
+          }, [isLocked, settings.currentStep, intros, entries, weeklyReviews, milestonesAchieved, activeModal]);
 
-        {entry.problemSolving && (
-          <div className="mb-4 p-3 bg-white rounded-2xl border border-[var(--border-color)] shadow-sm text-xs">
-            <p className="font-bold text-[var(--theme-primary)] uppercase mb-2 flex items-center gap-1"><ListTodo className="w-3 h-3"/> Problem Solving</p>
-            {entry.problemSolving.step1 && <div><span className="font-bold text-[var(--text-muted)] text-[9px] uppercase">Problema</span><p className="text-[var(--text-main)] italic mb-1">"{entry.problemSolving.step1}"</p></div>}
-            {entry.problemSolving.step4 && <div><span className="font-bold text-[var(--text-muted)] text-[9px] uppercase">Scelta</span><p className="text-[var(--text-main)] italic">"{entry.problemSolving.step4}"</p></div>}
-          </div>
-        )}
+          const updateSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
+          
+          const showToast = (msg) => {
+            setToastMsg(msg);
+            setTimeout(() => setToastMsg(""), 3000);
+          };
 
-        {isBinge && !entry.analysis && (
-          <button onClick={onAnalyze} className="w-full py-2 bg-white text-[var(--theme-text)] text-[10px] font-bold uppercase tracking-tighter border border-[var(--theme-border)] rounded-xl hover:bg-[var(--theme-light)] shadow-sm transition-all mb-3 flex justify-center gap-1"><Search className="w-3 h-3"/> Analizza l'episodio</button>
-        )}
-        {isBinge && entry.analysis && (
-          <div className="mb-3 p-3 bg-[var(--bg-main)]/40 rounded-xl text-[11px] border border-[var(--theme-border)]">
-            <p className="font-bold text-[var(--theme-text)] mb-1 uppercase">Lezione appresa:</p>
-            <p className="italic text-[var(--text-muted)]">"{entry.analysis.lesson || 'Nessuna'}"</p>
-          </div>
-        )}
+          const getCssVars = () => {
+            const t = themes[settings.theme] ? themes[settings.theme][settings.isDark ? 'dark' : 'light'] : themes['pink']['light'];
+            return {
+              '--bg-main': t.bgMain, '--bg-card': t.bgCard, '--bg-input': t.bgInput,
+              '--text-main': t.textMain, '--text-muted': t.textMuted, '--border-color': t.borderColor,
+              '--theme-primary': t.primary, '--theme-light': t.lightPrimary, '--theme-border': t.borderPrimary, '--theme-text': t.textPrimary,
+              '--activity-primary': t.actPrimary, '--activity-light': t.actLight, '--activity-border': t.actBorder, '--activity-text': t.actText,
+              '--sleep-primary': t.sleepPrimary, '--sleep-light': t.sleepLight, '--sleep-border': t.sleepBorder, '--sleep-text': t.sleepText,
+              backgroundColor: t.bgMain, color: t.textMain
+            };
+          };
 
-        {(entry.comments || entry.emotions?.length > 0 || entry.emotionsBefore?.length > 0 || entry.emotionsAfter?.length > 0) && (
-          <div className="mt-3 pt-3 border-t border-black/5 space-y-2">
-            {entry.emotions?.length > 0 && <div className="flex flex-wrap gap-1">{entry.emotions.map((e,i)=><span key={i} className="text-[9px] bg-[var(--bg-main)] text-[var(--text-muted)] px-2 py-0.5 rounded-md font-bold uppercase border border-[var(--border-color)]">{e}</span>)}</div>}
-            {(entry.emotionsBefore?.length > 0 || entry.emotionsAfter?.length > 0) && (
-              <div className="flex items-center gap-2">
-                <div className="flex flex-wrap gap-1">{entry.emotionsBefore?.map((e,i)=><span key={i} className="text-[9px] bg-[var(--bg-main)] text-[var(--text-muted)] px-1.5 py-0.5 rounded-md border border-[var(--border-color)]">{e}</span>)}</div>
-                <ArrowRight className="w-3 h-3 text-[var(--activity-primary)]" />
-                <div className="flex flex-wrap gap-1">{entry.emotionsAfter?.map((e,i)=><span key={i} className="text-[9px] bg-[var(--activity-text)] text-white px-1.5 py-0.5 rounded-md">{e}</span>)}</div>
+          const isToday = selectedDate === getTodayStr();
+          const dayOfMonth = new Date(selectedDate).getDate() || 1;
+          const todayQuote = dailyQuotes[(dayOfMonth - 1) % dailyQuotes.length];
+
+          let filteredEntries = entries.filter(e => e.date === selectedDate);
+          const mealsCount = filteredEntries.filter(e => e.type === 'food' && e.isMeal).length;
+          const bingesCount = filteredEntries.filter(e => e.type === 'food' && e.lossOfControl).length;
+
+          if (diaryFilter === 'binges') filteredEntries = filteredEntries.filter(e => e.isExcessive || e.lossOfControl);
+          else if (diaryFilter === 'urges') filteredEntries = filteredEntries.filter(e => e.hadUrge);
+          else if (diaryFilter === 'sleep') filteredEntries = filteredEntries.filter(e => e.type === 'sleep');
+
+          const daysSinceStepStart = settings.stepStartDate ? Math.floor((new Date() - new Date(settings.stepStartDate)) / (1000 * 60 * 60 * 24)) : 0;
+          let suggestedStep = null;
+          if (settings.currentStep === 1 && daysSinceStepStart >= 7) suggestedStep = 2;
+          else if (settings.currentStep === 2 && daysSinceStepStart >= 21) suggestedStep = 3;
+          else if (settings.currentStep === 3 && daysSinceStepStart >= 14) suggestedStep = 4;
+          else if (settings.currentStep === 4 && daysSinceStepStart >= 14) suggestedStep = 5;
+          else if (settings.currentStep === 5 && daysSinceStepStart >= 7) suggestedStep = 6;
+          else if (settings.currentStep === 6 && daysSinceStepStart >= 28) suggestedStep = 7;
+          else if (settings.currentStep === 7 && daysSinceStepStart >= 28) suggestedStep = 8;
+
+          if (isLocked) {
+            return <LockScreen pin={pin} onUnlock={() => setIsLocked(false)} onSetPin={(p) => { setPin(p); localStorage.setItem('bed-diary-pin', p); setIsLocked(false); }} cssVars={getCssVars()} />;
+          }
+
+          return (
+            <div style={getCssVars()} className="min-h-[100dvh] pb-[calc(6rem+env(safe-area-inset-bottom))] transition-colors duration-300 font-sans">
+              {toastMsg ? (
+                <div className="fixed bottom-24 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-in slide-in-from-bottom-10 fade-in duration-300">
+                  <div className="bg-[var(--bg-main)] border-2 border-[var(--theme-primary)] text-[var(--text-main)] px-6 py-3 rounded-full shadow-lg flex items-center gap-2 font-bold text-sm">
+                    <Sparkles className="w-5 h-5 text-[var(--theme-primary)]" /> {toastMsg}
+                  </div>
+                </div>
+              ) : null}
+
+              <header className="pt-10 pb-4 px-6 max-w-2xl mx-auto relative sticky top-0 bg-[var(--bg-main)]/95 backdrop-blur-md z-20 border-b border-[var(--border-color)]/50">
+                <div className="flex justify-between items-center mb-4">
+                  <h1 className="text-3xl font-serif tracking-tight">Diary</h1>
+                  <button onClick={() => setActiveModal('settings')} className="p-2 bg-[var(--bg-card)] text-[var(--text-muted)] border border-[var(--border-color)] rounded-full hover:opacity-80 shadow-sm"><Settings className="w-5 h-5" /></button>
+                </div>
+                
+                <div className="flex items-center justify-between bg-[var(--bg-card)] p-2 rounded-2xl shadow-sm border border-[var(--border-color)]">
+                  <button onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate()-1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-2 bg-[var(--bg-input)] rounded-xl hover:opacity-80 text-[var(--text-muted)]"><ChevronLeft className="w-5 h-5" /></button>
+                  <div className="text-center">
+                    <p className="text-[var(--text-main)] font-bold capitalize text-sm">{formatDate(selectedDate)}</p>
+                    {!isToday ? <p className="text-[10px] text-[var(--theme-primary)] font-bold mt-0.5 uppercase tracking-wider">Passato</p> : null}
+                  </div>
+                  <button onClick={() => { if(!isToday){ const d = new Date(selectedDate); d.setDate(d.getDate()+1); setSelectedDate(d.toISOString().split('T')[0]); } }} className={`p-2 rounded-xl text-[var(--text-muted)] bg-[var(--bg-input)] hover:opacity-80 ${isToday?'opacity-30':''}`}><ChevronRight className="w-5 h-5" /></button>
+                </div>
+              </header>
+
+              <div className="px-6 max-w-2xl mx-auto mt-6">
+                <div className="mb-6 bg-[var(--theme-light)] p-5 rounded-[2.5rem] shadow-sm border border-[var(--theme-border)] relative overflow-hidden">
+                  <Sun className="absolute -top-2 -right-2 w-16 h-16 text-[var(--theme-primary)] opacity-20" />
+                  <p className="text-[var(--theme-text)] font-medium text-lg italic leading-relaxed relative z-10 text-center">"{todayQuote}"</p>
+                </div>
+
+                {suggestedStep && isToday ? (
+                  <div className="mb-6 bg-[var(--activity-light)] p-4 rounded-2xl shadow-sm border border-[var(--activity-border)] flex items-center justify-between">
+                    <div className="flex flex-col"><span className="font-bold text-sm text-[var(--activity-text)]">Tempo di bilancio!</span><span className="text-xs text-[var(--text-main)] opacity-80 mt-1">Sei pronta/o per lo Step {suggestedStep}?</span></div>
+                    <button onClick={() => { updateSetting('currentStep', suggestedStep); updateSetting('stepStartDate', getTodayStr()); }} className="bg-[var(--activity-primary)] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">Inizia</button>
+                  </div>
+                ) : null}
+
+                <div className="flex justify-between items-center bg-[var(--bg-card)] p-4 rounded-[2.5rem] border border-[var(--border-color)] shadow-sm mb-6">
+                  <div className="flex-1 text-center border-r border-[var(--border-color)]"><p className="text-2xl font-black">{mealsCount}</p><p className="text-[9px] uppercase font-bold text-[var(--text-muted)]">Pasti</p></div>
+                  <div className="flex-1 text-center border-r border-[var(--border-color)]"><p className="text-2xl font-black">{entries.filter(e=>e.date===selectedDate).length}</p><p className="text-[9px] uppercase font-bold text-[var(--text-muted)]">Log</p></div>
+                  <div className="flex-1 text-center"><p className={`text-2xl font-black ${bingesCount > 0 ? 'text-red-400' : ''}`}>{bingesCount}</p><p className="text-[9px] uppercase font-bold text-[var(--text-muted)]">Abbuffate</p></div>
+                </div>
+
+                <div className="mb-4 flex items-center gap-2 bg-[var(--bg-input)] p-2 rounded-xl border border-[var(--border-color)] w-fit">
+                  <ListTodo className="w-4 h-4 text-[var(--text-muted)]" />
+                  <select value={diaryFilter} onChange={e => setDiaryFilter(e.target.value)} className="bg-transparent text-xs sm:text-sm text-[var(--text-muted)] font-bold outline-none cursor-pointer">
+                    <option value="all">Tutto il diario</option>
+                    <option value="binges">Solo Abbuffate / Eccessi</option>
+                    <option value="urges">Solo Impulsi</option>
+                    <option value="sleep">Solo Sonno</option>
+                  </select>
+                </div>
+
+                <main className="relative pb-24">
+                  {filteredEntries.length === 0 ? (
+                     <div className="text-center py-20 opacity-50"><Heart className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" /><p className="font-bold">Nessun dato.</p></div>
+                  ) : (
+                    <>
+                      <div className="absolute left-[26px] top-6 bottom-6 w-0.5 bg-[var(--border-color)] z-0"></div>
+                      {filteredEntries.map((entry, idx) => (
+                        <EntryCard 
+                          key={entry.id} entry={entry} 
+                          prevEntry={idx > 0 ? filteredEntries[idx-1] : null}
+                          currentStep={settings.currentStep}
+                          onAnalyze={() => { setBingeToAnalyze(entry); setActiveModal('bingeAnalysis'); }}
+                        />
+                      ))}
+                    </>
+                  )}
+                </main>
               </div>
-            )}
-            {entry.comments && <p className="text-xs italic text-[var(--text-muted)]">"{entry.comments}"</p>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
-function AddEntryModal({ selectedDate, currentStep, altActivities, onClose, onSave }) {
-  const [type, setType] = useState('food');
-  const [time, setTime] = useState(() => { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; });
-  const [locDur, setLocDur] = useState('');
-  
-  // Food
-  const [food, setFood] = useState(''); const [isMeal, setIsMeal] = useState(false); const [isExc, setIsExc] = useState(false); const [lossCtrl, setLossCtrl] = useState(false); const [emotionsFood, setEmotionsFood] = useState([]);
-  const [hadUrge, setHadUrge] = useState(false); const [urgeBox, setUrgeBox] = useState(''); const [altUsed, setAltUsed] = useState(''); const [usePs, setUsePs] = useState(false);
-  const [ps, setPs] = useState({step1:'', step2:'', step3:'', step4:'', step5:'', step6:''});
-  
-  // Act & Sleep
-  const [actName, setActName] = useState(''); const [emBefore, setEmBefore] = useState([]); const [emAfter, setEmAfter] = useState([]);
-  const [sleepType, setSleepType] = useState('wake'); const [sleepQ, setSleepQ] = useState('');
-  const [comments, setComments] = useState('');
+              <nav className="fixed bottom-0 left-0 w-full bg-[var(--bg-card)] border-t border-[var(--border-color)] shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-40" style={{paddingBottom: 'env(safe-area-inset-bottom)'}}>
+                <div className="max-w-2xl mx-auto flex justify-around items-center h-[75px] relative px-2">
+                  <button onClick={() => window.scrollTo({top:0, behavior:'smooth'})} className="flex flex-col items-center gap-1.5 text-[var(--theme-primary)] p-2"><CalendarDays className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-wider">Diario</span></button>
+                  {settings.currentStep >= 3 ? (
+                    <button onClick={() => setActiveModal('alt')} className="flex flex-col items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] p-2"><Lightbulb className="w-6 h-6" /><span className="text-[10px] font-bold uppercase tracking-wider">Idee</span></button>
+                  ) : <div className="w-14"></div>}
+                  <div className="relative -top-6">
+                    <button onClick={() => setActiveModal('add')} className="flex items-center justify-center w-16 h-16 bg-[var(--theme-primary)] text-white rounded-full shadow-xl transform hover:scale-105 active:scale-95 transition-all ring-4 ring-[var(--bg-main)]"><Plus className="w-8 h-8" /></button>
+                  </div>
+                  <button onClick={() => setActiveModal('review')} className="flex flex-col items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] p-2"><CheckCircle2 className="w-6 h-6" /><span className="text-[10px] font-bold uppercase tracking-wider">Review</span></button>
+                  <button onClick={() => setActiveModal('stats')} className="flex flex-col items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--theme-primary)] p-2"><Award className="w-6 h-6" /><span className="text-[10px] font-bold uppercase tracking-wider">Meta</span></button>
+                </div>
+              </nav>
 
-  // Timer
-  const [timeLeft, setTimeLeft] = useState(1800);
-  const [timerRunning, setTimerRunning] = useState(false);
-  
-  useEffect(() => {
-    let int = null;
-    if(timerRunning && timeLeft > 0) int = setInterval(() => setTimeLeft(t => t - 1), 1000);
-    else if(timeLeft === 0) setTimerRunning(false);
-    return () => clearInterval(int);
-  }, [timerRunning, timeLeft]);
-
-  const toggleEmo = (arr, setArr, emo) => { if(arr.includes(emo)) setArr(arr.filter(e=>e!==emo)); else setArr([...arr, emo]); };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const base = { id: Date.now(), date: selectedDate, time, comments, type };
-    if (type === 'food') {
-      if(!hadUrge && !food.trim()) return;
-      onSave({ ...base, food, location: locDur, isMeal, isExcessive: isExc, lossOfControl: lossCtrl, emotions: emotionsFood, hadUrge, urgeBoxContent: urgeBox, altActivityUsed: altUsed, problemSolving: usePs ? ps : null });
-    } else if (type === 'activity') {
-      if(!actName.trim()) return;
-      onSave({ ...base, activityName: actName, duration: locDur, emotionsBefore: emBefore, emotionsAfter: emAfter });
-    } else {
-      onSave({ ...base, sleepType, duration: locDur, sleepQuality: sleepQ });
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
-        <div className="flex justify-between items-center mb-6">
-          <div><h2 className="text-2xl font-serif text-[var(--text-main)]">Registra</h2><p className="text-[10px] text-[var(--theme-primary)] font-bold uppercase mt-1">Per la data: {formatDate(selectedDate)}</p></div>
-          <button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button>
-        </div>
-        
-        <div className="flex bg-[var(--bg-input)] p-1 rounded-2xl mb-6">
-          <button onClick={()=>setType('food')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${type==='food'?'bg-[var(--bg-card)] text-[var(--theme-text)] shadow-sm':'text-[var(--text-muted)]'}`}>🍽️ Cibo</button>
-          <button onClick={()=>setType('activity')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${type==='activity'?'bg-[var(--bg-card)] text-[var(--activity-text)] shadow-sm':'text-[var(--text-muted)]'}`}>🧘‍♀️ Corpo</button>
-          <button onClick={()=>setType('sleep')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${type==='sleep'?'bg-[var(--bg-card)] text-[var(--sleep-text)] shadow-sm':'text-[var(--text-muted)]'}`}>🛌 Sonno</button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex gap-4">
-            <div className="flex-1"><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Ora</label><input type="time" value={time} onChange={e=>setTime(e.target.value)} required className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--theme-primary)] font-bold text-base text-[var(--text-main)]"/></div>
-            {type !== 'sleep' && <div className="flex-1"><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">{type==='food'?'Luogo':'Durata'}</label><input type="text" value={locDur} onChange={e=>setLocDur(e.target.value)} placeholder={type==='food'?'Cucina...':'30 min'} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--theme-primary)] text-base text-[var(--text-main)]"/></div>}
-          </div>
-
-          {type === 'sleep' && (
-            <div className="space-y-6 animate-in fade-in">
-              <div><label className="block text-[10px] font-bold text-[var(--sleep-text)] uppercase mb-2">Momento</label><select value={sleepType} onChange={e=>setSleepType(e.target.value)} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none text-base text-[var(--text-main)] font-bold"><option value="wake">☀️ Risveglio</option><option value="bed">🌙 A letto</option></select></div>
-              <div className="bg-[var(--sleep-light)] p-5 rounded-3xl border border-[var(--sleep-border)] text-center"><label className="block text-[10px] font-bold text-[var(--sleep-text)] uppercase mb-4">Qualità (1-5)</label><div className="flex justify-center gap-3">{[1,2,3,4,5].map(q => <button type="button" key={q} onClick={()=>setSleepQ(String(q))} className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg border transition-all active:scale-95 ${sleepQ===String(q) ? 'bg-[var(--sleep-primary)] text-white border-[var(--sleep-primary)] shadow-md' : 'bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{q}</button>)}</div></div>
+              {activeModal === 'add' ? <AddEntryModal selectedDate={selectedDate} currentStep={settings.currentStep} altActivities={altActivities} onClose={() => setActiveModal(null)} onSave={(e) => { setEntries([...entries, e].sort((a,b)=>a.time.localeCompare(b.time))); setActiveModal(null); showToast("Registrato!"); }} /> : null}
+              {activeModal === 'settings' ? <SettingsModal settings={settings} updateSetting={updateSetting} entries={entries} setEntries={setEntries} userPin={pin} removePin={() => setPin(null)} onClose={() => setActiveModal(null)} /> : null}
+              {activeModal === 'alt' ? <AltActivitiesModal altActivities={altActivities} setAltActivities={setAltActivities} onClose={() => setActiveModal(null)} /> : null}
+              {activeModal === 'review' ? <WeeklyReviewModal selectedDate={selectedDate} currentStep={settings.currentStep} onClose={() => setActiveModal(null)} onSave={(rev) => { setWeeklyReviews([...weeklyReviews, { ...rev, id: Date.now(), date: selectedDate, step: settings.currentStep }]); setActiveModal(null); showToast("Revisione salvata!"); }} /> : null}
+              {activeModal === 'stats' ? <StatsModal settings={settings} updateSetting={updateSetting} entries={entries} weeklyReviews={weeklyReviews} intros={intros} milestonesAchieved={milestonesAchieved} onClose={() => setActiveModal(null)} onEditIntro={(step) => { setEditingIntroStep(step); setActiveModal('intro_edit'); }} /> : null}
+              {activeModal === 'intro' ? <IntroStepModal step={settings.currentStep} onClose={(ans) => { setIntros({...intros, [settings.currentStep]: {date: getTodayStr(), answers: ans}}); setActiveModal(null); }} /> : null}
+              {activeModal === 'intro_edit' ? <IntroStepModal step={editingIntroStep} isEditing={true} initialAnswers={intros[editingIntroStep]?.answers || {}} onClose={(ans) => { setIntros({...intros, [editingIntroStep]: {date: intros[editingIntroStep]?.date || getTodayStr(), answers: ans}}); setActiveModal('stats'); }} onCancel={() => setActiveModal('stats')} /> : null}
+              {activeModal === 'milestone' ? <MilestoneModal milestone={msToCelebrate} onClose={(res) => { setMilestonesAchieved([...milestonesAchieved, res]); setActiveModal(null); setMsToCelebrate(null); }} /> : null}
+              {activeModal === 'bingeAnalysis' && bingeToAnalyze ? <BingeAnalysisModal entry={bingeToAnalyze} onClose={() => setActiveModal(null)} onSave={(analysis) => { const updated = entries.map(e => e.id === bingeToAnalyze.id ? {...e, analysis} : e); setEntries(updated); setActiveModal(null); showToast("Analisi salvata."); }} /> : null}
             </div>
-          )}
+          );
+        }
 
-          {type === 'food' && (
-            <div className="space-y-6 animate-in fade-in">
-              {currentStep >= 3 && (
-                <div className="bg-[var(--theme-light)] p-5 rounded-3xl border border-[var(--theme-border)]">
-                  <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={hadUrge} onChange={e=>setHadUrge(e.target.checked)} className="w-6 h-6 rounded border-[var(--border-color)] text-[var(--theme-primary)]"/><span className="text-base font-bold text-[var(--theme-text)]">Impulso ORA</span></label>
-                  {hadUrge && (
-                    <div className="mt-5 pt-5 border-t border-[var(--theme-border)] space-y-5 animate-in fade-in">
-                      <div className="bg-white p-5 rounded-2xl border border-[var(--theme-border)] text-center">
-                        <span className="text-4xl font-bold text-[var(--theme-primary)] block mb-3">{Math.floor(timeLeft/60).toString().padStart(2,'0')}:{(timeLeft%60).toString().padStart(2,'0')}</span>
-                        <button type="button" onClick={()=>setTimerRunning(!timerRunning)} className="px-5 py-3 bg-[var(--bg-input)] text-[var(--theme-primary)] text-sm font-bold rounded-xl active:scale-95">{timerRunning?'PAUSA':'AVVIA TIMER ONDA'}</button>
+        // --- SUB-COMPONENTS ---
+        function LockScreen({ pin, onUnlock, onSetPin, cssVars }) {
+          const [input, setInput] = useState('');
+          const [error, setError] = useState(false);
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            if(input.length !== 4) return;
+            if(!pin) onSetPin(input);
+            else if(pin === input) onUnlock();
+            else { setError(true); setInput(''); }
+          };
+          const handleSkip = () => {
+            localStorage.setItem('bed-diary-pin', 'disabled');
+            onUnlock();
+          };
+          return (
+            <div style={cssVars} className="fixed inset-0 z-[100] bg-[var(--bg-main)] flex items-center justify-center p-4 min-h-[100dvh]">
+              <div className="bg-[var(--bg-card)] p-6 sm:p-8 rounded-[2.5rem] shadow-xl max-w-sm w-full text-center border border-[var(--border-color)]">
+                <div className="w-20 h-20 mx-auto bg-[var(--theme-light)] rounded-full flex items-center justify-center mb-6">
+                  <Lock className="w-10 h-10 text-[var(--theme-primary)]" />
+                </div>
+                <h1 className="text-3xl font-serif text-[var(--text-main)] mb-2">Diary</h1>
+                <p className="text-[var(--text-muted)] mb-8 text-sm leading-relaxed">{pin ? 'Bentornata/o. Inserisci il PIN per entrare nel tuo spazio.' : 'Imposta un PIN di 4 cifre per proteggere il tuo diario.'}</p>
+                <form onSubmit={handleSubmit}>
+                  <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={input} onChange={e => {setInput(e.target.value.replace(/\D/g,'')); setError(false);}} placeholder="••••" className={`w-full text-center text-[2.5rem] tracking-[0.5em] p-4 bg-[var(--bg-input)] rounded-2xl outline-none border ${error?'border-red-400':'border-[var(--border-color)] focus:ring-2 focus:ring-[var(--theme-primary)]'} text-[var(--text-main)] mb-2 h-20`} />
+                  {error ? <p className="text-red-400 text-xs font-bold mt-2 animate-bounce">PIN errato. Riprova.</p> : null}
+                  <button type="submit" disabled={input.length!==4} className="w-full mt-6 py-4 bg-[var(--theme-primary)] text-white font-extrabold tracking-widest text-sm rounded-2xl hover:opacity-90 disabled:opacity-50 uppercase shadow-md active:scale-95 transition-all">Entra</button>
+                </form>
+                {!pin ? (
+                  <button onClick={handleSkip} className="mt-6 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--theme-text)] underline decoration-2 underline-offset-4 p-2">Continua senza PIN</button>
+                ) : null}
+              </div>
+            </div>
+          );
+        }
+
+        function EntryCard({ entry, prevEntry, currentStep, onAnalyze }) {
+          const isBinge = entry.lossOfControl;
+          const isSleep = entry.type === 'sleep';
+          const isAct = entry.type === 'activity';
+          
+          let bg = isBinge ? 'bg-[var(--theme-light)] border-[var(--theme-border)] shadow-sm' : isSleep ? 'bg-[var(--sleep-light)] border-[var(--sleep-border)]' : isAct ? 'bg-[var(--activity-light)] border-[var(--activity-border)]' : 'bg-[var(--bg-card)] border-[var(--border-color)]';
+          let dot = isBinge ? 'bg-[var(--theme-primary)]' : isSleep ? 'bg-[var(--sleep-primary)]' : isAct ? 'bg-[var(--activity-primary)]' : 'bg-[var(--text-muted)] opacity-30';
+
+          let gapWarning = false;
+          if (!isAct && !isSleep && prevEntry && !prevEntry.type?.includes('sleep') && !prevEntry.type?.includes('activity')) {
+            const t1 = new Date(`2000-01-01T${prevEntry.time}`); const t2 = new Date(`2000-01-01T${entry.time}`);
+            if ((t2 - t1) / (1000 * 60 * 60) > 4) gapWarning = true;
+          }
+
+          return (
+            <div className="relative pl-14 mb-8 z-10 animate-in slide-in-from-bottom-2">
+              {gapWarning ? <div className="absolute -top-6 left-12 text-[10px] font-bold text-[var(--theme-primary)] flex items-center gap-1 opacity-70"><AlertCircle className="w-3 h-3" /> Intervallo &gt; 4h</div> : null}
+              <div className={`absolute left-[19px] top-4 w-4 h-4 rounded-full ${dot} border-4 border-[var(--bg-main)] shadow-sm`}></div>
+              <div className={`border p-5 rounded-[2.2rem] ${bg}`}>
+                <div className="flex justify-between items-start mb-4">
+                  <span className="text-xs font-black text-[var(--text-main)] bg-[var(--bg-main)]/50 px-2 py-1 rounded-lg">{entry.time}</span>
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    {entry.isMeal ? <span className="text-[9px] font-bold uppercase bg-white/50 px-2 py-1 rounded-md text-[var(--text-main)]">( PASTO )</span> : null}
+                    {isBinge && entry.isExcessive ? <span className="text-[9px] font-bold uppercase bg-red-400 text-white px-2 py-1 rounded-md shadow-sm">Binge O</span> : null}
+                    {isBinge && !entry.isExcessive ? <span className="text-[9px] font-bold uppercase bg-red-300 text-white px-2 py-1 rounded-md shadow-sm">Binge S</span> : null}
+                    {!isBinge && entry.isExcessive ? <span className="text-[9px] font-bold uppercase bg-[var(--theme-border)] text-[var(--theme-text)] px-2 py-1 rounded-md shadow-sm">Eccesso</span> : null}
+                    {isAct && entry.duration ? <span className="text-[9px] font-bold bg-[var(--activity-border)] text-[var(--activity-text)] px-2 py-1 rounded-md">{entry.duration}</span> : null}
+                  </div>
+                </div>
+
+                <div className="mb-2">
+                  <p className="text-lg font-bold text-[var(--text-main)] leading-tight">
+                    {isSleep ? (entry.sleepType==='wake'?'Sveglia ☀️':'A letto 🌙') : isAct ? entry.activityName : (entry.isMeal ? `( ${entry.food} )` : entry.food)}
+                    {entry.isExcessive ? <span className="text-[var(--theme-primary)] ml-1">***</span> : null}
+                  </p>
+                  {isSleep ? <p className="text-xs font-bold text-[var(--sleep-text)]/70 mt-1 uppercase">Qualità: {entry.sleepQuality || '-'}/5</p> : null}
+                  {!isSleep && !isAct && entry.location ? <p className="text-xs text-[var(--text-muted)] mb-3 italic">📍 {entry.location}</p> : null}
+                </div>
+
+                {currentStep >= 3 && entry.hadUrge ? (
+                  <div className="mb-4 p-3 bg-white/60 rounded-2xl border border-[var(--theme-border)] text-xs">
+                    <p className="font-bold text-[var(--theme-text)] uppercase mb-1">Impulso affrontato</p>
+                    <p className="italic text-[var(--text-muted)] whitespace-pre-line">"{entry.urgeBoxContent||'Nessuna nota'}"</p>
+                    {entry.altActivityUsed ? <p className="mt-2 font-bold text-[var(--text-main)]">💡 {entry.altActivityUsed}</p> : null}
+                  </div>
+                ) : null}
+
+                {entry.problemSolving ? (
+                  <div className="mb-4 p-3 bg-white rounded-2xl border border-[var(--border-color)] shadow-sm text-xs">
+                    <p className="font-bold text-[var(--theme-primary)] uppercase mb-2 flex items-center gap-1"><ListTodo className="w-3 h-3"/> Problem Solving</p>
+                    {entry.problemSolving.step1 ? <div><span className="font-bold text-[var(--text-muted)] text-[9px] uppercase">Problema</span><p className="text-[var(--text-main)] italic mb-1">"{entry.problemSolving.step1}"</p></div> : null}
+                    {entry.problemSolving.step4 ? <div><span className="font-bold text-[var(--text-muted)] text-[9px] uppercase">Scelta</span><p className="text-[var(--text-main)] italic">"{entry.problemSolving.step4}"</p></div> : null}
+                  </div>
+                ) : null}
+
+                {isBinge && !entry.analysis ? (
+                  <button onClick={onAnalyze} className="w-full py-2 bg-white text-[var(--theme-text)] text-[10px] font-bold uppercase tracking-tighter border border-[var(--theme-border)] rounded-xl hover:bg-[var(--theme-light)] shadow-sm transition-all mb-3 flex justify-center gap-1"><Search className="w-3 h-3"/> Analizza l'episodio</button>
+                ) : null}
+                {isBinge && entry.analysis ? (
+                  <div className="mb-3 p-3 bg-[var(--bg-main)]/40 rounded-xl text-[11px] border border-[var(--theme-border)]">
+                    <p className="font-bold text-[var(--theme-text)] mb-1 uppercase">Lezione appresa:</p>
+                    <p className="italic text-[var(--text-muted)]">"{entry.analysis.lesson || 'Nessuna'}"</p>
+                  </div>
+                ) : null}
+
+                {(entry.comments || entry.emotions?.length > 0 || entry.emotionsBefore?.length > 0 || entry.emotionsAfter?.length > 0) ? (
+                  <div className="mt-3 pt-3 border-t border-black/5 space-y-2">
+                    {entry.emotions?.length > 0 ? <div className="flex flex-wrap gap-1">{entry.emotions.map((e,i)=><span key={i} className="text-[9px] bg-[var(--bg-main)] text-[var(--text-muted)] px-2 py-0.5 rounded-md font-bold uppercase border border-[var(--border-color)]">{e}</span>)}</div> : null}
+                    {(entry.emotionsBefore?.length > 0 || entry.emotionsAfter?.length > 0) ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap gap-1">{entry.emotionsBefore?.map((e,i)=><span key={i} className="text-[9px] bg-[var(--bg-main)] text-[var(--text-muted)] px-1.5 py-0.5 rounded-md border border-[var(--border-color)]">{e}</span>)}</div>
+                        <ArrowRight className="w-3 h-3 text-[var(--activity-primary)]" />
+                        <div className="flex flex-wrap gap-1">{entry.emotionsAfter?.map((e,i)=><span key={i} className="text-[9px] bg-[var(--activity-text)] text-white px-1.5 py-0.5 rounded-md">{e}</span>)}</div>
                       </div>
-                      <textarea value={urgeBox} onChange={e=>setUrgeBox(e.target.value)} rows={2} placeholder="Cosa vorresti mangiare? Scrivilo per prenderne atto." className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea>
-                      <select value={altUsed} onChange={e=>setAltUsed(e.target.value)} className="w-full p-4 bg-white border border-[var(--theme-border)] rounded-xl text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"><option value="">-- Seleziona alternativa usata --</option>{altActivities.map((a,i)=><option key={i} value={a}>{a}</option>)}</select>
-                      {currentStep >= 4 && (
-                        <div className="pt-5 border-t border-[var(--theme-border)]">
-                          <label className="flex items-center gap-3 cursor-pointer mb-4"><input type="checkbox" checked={usePs} onChange={e=>setUsePs(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-sm font-bold text-[var(--text-main)]">🧩 Risolvi il problema (Scheda 6 Passi)</span></label>
-                          {usePs && (
-                            <div className="space-y-5 border-l-2 border-[var(--theme-primary)] pl-4 ml-2 animate-in fade-in">
-                              {['Identifica il problema', 'Brainstorming', 'Conseguenze', 'Scelta', "Piano d'azione", 'Valutazione'].map((label, i) => (
-                                <div key={i}><label className="block text-xs font-bold text-[var(--text-muted)] uppercase mb-1">{i+1}. {label}</label><textarea value={ps[`step${i+1}`]} onChange={e=>setPs({...ps, [`step${i+1}`]:e.target.value})} className="w-full p-4 bg-white border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] outline-none resize-none" rows="2"></textarea></div>
-                              ))}
+                    ) : null}
+                    {entry.comments ? <p className="text-xs italic text-[var(--text-muted)]">"{entry.comments}"</p> : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          );
+        }
+
+        function AddEntryModal({ selectedDate, currentStep, altActivities, onClose, onSave }) {
+          const [type, setType] = useState('food');
+          const [time, setTime] = useState(() => { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; });
+          const [locDur, setLocDur] = useState('');
+          
+          const [food, setFood] = useState(''); const [isMeal, setIsMeal] = useState(false); const [isExc, setIsExc] = useState(false); const [lossCtrl, setLossCtrl] = useState(false); const [emotionsFood, setEmotionsFood] = useState([]);
+          const [hadUrge, setHadUrge] = useState(false); const [urgeBox, setUrgeBox] = useState(''); const [altUsed, setAltUsed] = useState(''); const [usePs, setUsePs] = useState(false);
+          const [ps, setPs] = useState({step1:'', step2:'', step3:'', step4:'', step5:'', step6:''});
+          
+          const [actName, setActName] = useState(''); const [emBefore, setEmBefore] = useState([]); const [emAfter, setEmAfter] = useState([]);
+          const [sleepType, setSleepType] = useState('wake'); const [sleepQ, setSleepQ] = useState('');
+          const [comments, setComments] = useState('');
+
+          const [timeLeft, setTimeLeft] = useState(1800);
+          const [timerRunning, setTimerRunning] = useState(false);
+          
+          useEffect(() => {
+            let int = null;
+            if(timerRunning && timeLeft > 0) int = setInterval(() => setTimeLeft(t => t - 1), 1000);
+            else if(timeLeft === 0) setTimerRunning(false);
+            return () => clearInterval(int);
+          }, [timerRunning, timeLeft]);
+
+          const toggleEmo = (arr, setArr, emo) => { if(arr.includes(emo)) setArr(arr.filter(e=>e!==emo)); else setArr([...arr, emo]); };
+          const EmoBtns = ({arr, setArr, colorClass}) => (
+            <div className="flex flex-wrap gap-2">
+              {EMOZIONI.map(e => {
+                const act = arr.includes(e);
+                return <button key={e} type="button" onClick={()=>toggleEmo(arr,setArr,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? colorClass+' text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
+              })}
+            </div>
+          );
+
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            const base = { id: Date.now(), date: selectedDate, time, comments, type };
+            if (type === 'food') {
+              if(!hadUrge && !food.trim()) return;
+              onSave({ ...base, food, location: locDur, isMeal, isExcessive: isExc, lossOfControl: lossCtrl, emotions: emotionsFood, hadUrge, urgeBoxContent: urgeBox, altActivityUsed: altUsed, problemSolving: usePs ? ps : null });
+            } else if (type === 'activity') {
+              if(!actName.trim()) return;
+              onSave({ ...base, activityName: actName, duration: locDur, emotionsBefore: emBefore, emotionsAfter: emAfter });
+            } else {
+              onSave({ ...base, sleepType, duration: locDur, sleepQuality: sleepQ });
+            }
+          };
+
+          return (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
+                <div className="flex justify-between items-center mb-6">
+                  <div><h2 className="text-2xl font-serif text-[var(--text-main)]">Registra</h2><p className="text-[10px] text-[var(--theme-primary)] font-bold uppercase mt-1">Per la data: {formatDate(selectedDate)}</p></div>
+                  <button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button>
+                </div>
+                
+                <div className="flex bg-[var(--bg-input)] p-1 rounded-2xl mb-6">
+                  <button onClick={()=>setType('food')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${type==='food'?'bg-[var(--bg-card)] text-[var(--theme-text)] shadow-sm':'text-[var(--text-muted)]'}`}>🍽️ Cibo</button>
+                  <button onClick={()=>setType('activity')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${type==='activity'?'bg-[var(--bg-card)] text-[var(--activity-text)] shadow-sm':'text-[var(--text-muted)]'}`}>🧘‍♀️ Corpo</button>
+                  <button onClick={()=>setType('sleep')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${type==='sleep'?'bg-[var(--bg-card)] text-[var(--sleep-text)] shadow-sm':'text-[var(--text-muted)]'}`}>🛌 Sonno</button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-1"><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Ora</label><input type="time" value={time} onChange={e=>setTime(e.target.value)} required className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--theme-primary)] font-bold text-base text-[var(--text-main)]"/></div>
+                    {type !== 'sleep' ? <div className="flex-1"><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">{type==='food'?'Luogo':'Durata'}</label><input type="text" value={locDur} onChange={e=>setLocDur(e.target.value)} placeholder={type==='food'?'Cucina...':'30 min'} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--theme-primary)] text-base text-[var(--text-main)]"/></div> : null}
+                  </div>
+
+                  {type === 'sleep' ? (
+                    <div className="space-y-6 animate-in fade-in">
+                      <div><label className="block text-[10px] font-bold text-[var(--sleep-text)] uppercase mb-2">Momento</label><select value={sleepType} onChange={e=>setSleepType(e.target.value)} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none text-base text-[var(--text-main)] font-bold"><option value="wake">☀️ Risveglio</option><option value="bed">🌙 A letto</option></select></div>
+                      <div className="bg-[var(--sleep-light)] p-5 rounded-3xl border border-[var(--sleep-border)] text-center"><label className="block text-[10px] font-bold text-[var(--sleep-text)] uppercase mb-4">Qualità (1-5)</label><div className="flex justify-center gap-3">{[1,2,3,4,5].map(q => <button type="button" key={q} onClick={()=>setSleepQ(String(q))} className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg border transition-all active:scale-95 ${sleepQ===String(q) ? 'bg-[var(--sleep-primary)] text-white border-[var(--sleep-primary)] shadow-md' : 'bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{q}</button>)}</div></div>
+                    </div>
+                  ) : null}
+
+                  {type === 'food' ? (
+                    <div className="space-y-6 animate-in fade-in">
+                      {currentStep >= 3 ? (
+                        <div className="bg-[var(--theme-light)] p-5 rounded-3xl border border-[var(--theme-border)]">
+                          <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={hadUrge} onChange={e=>setHadUrge(e.target.checked)} className="w-6 h-6 rounded border-[var(--border-color)] text-[var(--theme-primary)]"/><span className="text-base font-bold text-[var(--theme-text)]">Impulso ORA</span></label>
+                          {hadUrge ? (
+                            <div className="mt-5 pt-5 border-t border-[var(--theme-border)] space-y-5 animate-in fade-in">
+                              <div className="bg-white p-5 rounded-2xl border border-[var(--theme-border)] text-center">
+                                <span className="text-4xl font-bold text-[var(--theme-primary)] block mb-3">{Math.floor(timeLeft/60).toString().padStart(2,'0')}:{(timeLeft%60).toString().padStart(2,'0')}</span>
+                                <button type="button" onClick={()=>setTimerRunning(!timerRunning)} className="px-5 py-3 bg-[var(--bg-input)] text-[var(--theme-primary)] text-sm font-bold rounded-xl active:scale-95">{timerRunning?'PAUSA':'AVVIA TIMER ONDA'}</button>
+                              </div>
+                              <textarea value={urgeBox} onChange={e=>setUrgeBox(e.target.value)} rows={2} placeholder="Cosa vorresti mangiare? Scrivilo per prenderne atto." className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea>
+                              <select value={altUsed} onChange={e=>setAltUsed(e.target.value)} className="w-full p-4 bg-white border border-[var(--theme-border)] rounded-xl text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"><option value="">-- Seleziona alternativa usata --</option>{altActivities.map((a,i)=><option key={i} value={a}>{a}</option>)}</select>
+                              {currentStep >= 4 ? (
+                                <div className="pt-5 border-t border-[var(--theme-border)]">
+                                  <label className="flex items-center gap-3 cursor-pointer mb-4"><input type="checkbox" checked={usePs} onChange={e=>setUsePs(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-sm font-bold text-[var(--text-main)]">🧩 Risolvi il problema (Scheda 6 Passi)</span></label>
+                                  {usePs ? (
+                                    <div className="space-y-5 border-l-2 border-[var(--theme-primary)] pl-4 ml-2 animate-in fade-in">
+                                      {['Identifica il problema', 'Brainstorming', 'Conseguenze', 'Scelta', "Piano d'azione", 'Valutazione'].map((label, i) => (
+                                        <div key={i}><label className="block text-xs font-bold text-[var(--text-muted)] uppercase mb-1">{i+1}. {label}</label><textarea value={ps[`step${i+1}`]} onChange={e=>setPs({...ps, [`step${i+1}`]:e.target.value})} className="w-full p-4 bg-white border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] outline-none resize-none" rows="2"></textarea></div>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
                             </div>
-                          )}
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <div>
+                        <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Cibo / Bevanda (se hai mangiato)</label>
+                        <textarea value={food} onChange={e=>setFood(e.target.value)} required={!hadUrge} rows="3" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea>
+                        <div className="mt-4 space-y-3">
+                          <label className="flex items-center gap-3 cursor-pointer w-fit p-1"><input type="checkbox" checked={isMeal} onChange={e=>setIsMeal(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-base font-bold text-[var(--text-main)]">Pasto principale ( )</span></label>
+                          <div className="p-4 border border-[var(--theme-border)] rounded-2xl bg-[var(--theme-light)] space-y-4">
+                            <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={isExc} onChange={e=>setIsExc(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-base font-medium text-[var(--text-main)]">Quantità eccessiva *</span></label>
+                            <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={lossCtrl} onChange={e=>setLossCtrl(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-base font-bold text-[var(--theme-text)] flex items-center gap-1">Perdita di controllo <AlertTriangle className="w-4 h-4"/></span></label>
+                            <p className="text-[10px] text-[var(--text-muted)] italic leading-tight">Nota: Abbuffata Oggettiva = Eccesso + Perdita di Controllo.</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Emozioni</label><EmoBtns arr={emotionsFood} setArr={setEmotionsFood} colorClass="bg-[var(--theme-primary)] border-[var(--theme-primary)]"/></div>
+                    </div>
+                  ) : null}
+
+                  {type === 'activity' ? (
+                    <div className="space-y-6 animate-in fade-in">
+                      <div><label className="block text-[10px] font-bold text-[var(--activity-text)] uppercase mb-2">Attività</label><input type="text" required value={actName} onChange={e=>setActName(e.target.value)} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--activity-primary)]"/></div>
+                      <div className="bg-[var(--activity-light)] p-5 rounded-3xl border border-[var(--activity-border)] space-y-5">
+                        <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Prima</label><EmoBtns arr={emBefore} setArr={setEmBefore} colorClass="bg-[var(--activity-text)] border-[var(--activity-text)]"/></div>
+                        <div><label className="block text-[10px] font-bold text-[var(--activity-text)] uppercase mb-2">Dopo</label><EmoBtns arr={emAfter} setArr={setEmAfter} colorClass="bg-[var(--activity-text)] border-[var(--activity-text)]"/></div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Note / Contesto</label><textarea value={comments} onChange={e=>setComments(e.target.value)} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+                  <button type="submit" className="w-full py-4 mt-4 bg-[var(--theme-primary)] text-white font-extrabold rounded-2xl shadow-lg uppercase tracking-widest text-sm hover:opacity-90 active:scale-95 transition-all">Salva</button>
+                </form>
+              </div>
+            </div>
+          );
+        }
+
+        function SettingsModal({ settings, updateSetting, entries, setEntries, userPin, removePin, onClose }) {
+          const handleExport = () => {
+            const dataStr = JSON.stringify(entries, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `diary-bed-backup.json`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+          };
+          const handleImport = (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => { try { const d = JSON.parse(event.target.result); if (Array.isArray(d)) { setEntries(d); onClose(); } } catch (err) { alert("File non valido"); } };
+            reader.readAsText(file);
+          };
+          const endD = calculateStepEndDate(settings.currentStep, settings.stepStartDate);
+
+          return (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
+                <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><Settings className="w-6 h-6 text-[var(--theme-primary)]"/> Impostazioni</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
+                <div className="space-y-6">
+                  <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
+                    <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider mb-4">Percorso CBT-E</h3>
+                    <select value={settings.currentStep} onChange={e=>{updateSetting('currentStep', parseInt(e.target.value)); updateSetting('stepStartDate', getTodayStr());}} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none text-[var(--text-main)] font-bold mb-4">
+                      <option value="1">Step 1: Iniziare bene</option><option value="2">Step 2: Mangiare regolare</option><option value="3">Step 3: Alternative</option><option value="4">Step 4: Problem Solving</option><option value="5">Step 5: Fare il bilancio</option><option value="6">Step 6: La Dieta</option><option value="7">Step 7: Immagine Corporea</option><option value="8">Step 8: Prevenzione</option>
+                    </select>
+                    <div className="p-3 bg-[var(--bg-input)] rounded-xl border border-[var(--border-color)] text-xs text-[var(--text-main)] space-y-1"><p><span className="font-bold">Inizio:</span> {formatDate(settings.stepStartDate)}</p>{endD ? <p><span className="font-bold">Bilancio stimato:</span> {formatDate(endD)}</p> : null}</div>
+                  </div>
+                  <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
+                    <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider mb-4">Sicurezza & Aspetto</h3>
+                    <div className="flex items-center justify-between mb-4"><span className="font-bold text-[var(--text-main)] text-sm flex items-center gap-2">{userPin?<Lock className="w-4 h-4 text-[var(--theme-primary)]"/>:<Unlock className="w-4 h-4 text-[var(--text-muted)]"/>} Blocco PIN</span>{userPin ? <button onClick={() => {localStorage.setItem('bed-diary-pin', 'disabled'); removePin();}} className="px-3 py-1.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-lg uppercase active:scale-95">Rimuovi</button> : <span className="text-[10px] text-[var(--text-muted)] uppercase">Non attivo</span>}</div>
+                    <div className="flex items-center justify-between mb-4"><span className="font-bold text-[var(--text-main)] text-sm flex items-center gap-2"><Moon className="w-4 h-4"/> Scura</span><button onClick={()=>updateSetting('isDark', !settings.isDark)} className={`w-12 h-6 rounded-full relative transition-colors ${settings.isDark?'bg-[var(--theme-primary)]':'bg-[var(--border-color)]'}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${settings.isDark?'translate-x-7':'translate-x-1'}`}></div></button></div>
+                    <div className="flex items-center justify-between"><span className="font-bold text-[var(--text-main)] text-sm flex items-center gap-2"><Palette className="w-4 h-4 text-[var(--theme-primary)]"/> Tema</span><div className="flex gap-2">{['pink','aqua','lavender'].map(c => <button key={c} onClick={()=>updateSetting('theme', c)} className={`w-8 h-8 rounded-full border-[3px] transition-all ${settings.theme===c?'scale-110 border-[var(--text-main)]':'border-transparent'}`} style={{backgroundColor: themes[c].light.primary}}></button>)}</div></div>
+                  </div>
+                  <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
+                    <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider mb-4">Dati</h3>
+                    <button onClick={handleExport} className="w-full flex items-center justify-center gap-2 bg-[var(--bg-input)] text-[var(--text-main)] py-3 rounded-xl hover:opacity-80 font-bold text-sm mb-3"><Download className="w-4 h-4"/> Esporta Backup</button>
+                    <label className="w-full flex items-center justify-center gap-2 bg-[var(--bg-input)] text-[var(--text-main)] py-3 rounded-xl hover:opacity-80 font-bold text-sm cursor-pointer"><Upload className="w-4 h-4"/> Ripristina Backup<input type="file" accept=".json" onChange={handleImport} className="hidden"/></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        function AltActivitiesModal({ altActivities, setAltActivities, onClose }) {
+          const [newAct, setNewAct] = useState('');
+          return (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
+                <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><Lightbulb className="w-6 h-6 text-[var(--theme-primary)]"/> Alternative</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
+                <p className="text-xs text-[var(--theme-text)] bg-[var(--theme-light)] p-4 rounded-2xl border border-[var(--theme-border)] mb-6">Tieni questa lista a portata di mano per occupare il tempo finché l'onda dell'impulso non passa.</p>
+                <form onSubmit={e=>{e.preventDefault(); if(newAct.trim()){ setAltActivities([...altActivities, newAct.trim()]); setNewAct(''); }}} className="flex gap-2 mb-6">
+                  <input type="text" value={newAct} onChange={e=>setNewAct(e.target.value)} placeholder="Es. Fare un puzzle..." required className="flex-1 p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--theme-primary)] text-[var(--text-main)] text-sm"/>
+                  <button type="submit" className="p-3 bg-[var(--theme-primary)] text-white rounded-xl hover:opacity-90"><Plus className="w-5 h-5"/></button>
+                </form>
+                <div className="space-y-3">
+                  {altActivities.length === 0 ? <p className="text-center text-[var(--text-muted)] text-sm py-4">Nessuna attività.</p> : altActivities.map((act, i) => (
+                    <div key={i} className="flex items-center justify-between bg-[var(--bg-card)] p-3 border border-[var(--border-color)] rounded-xl shadow-sm"><span className="text-[var(--text-main)] text-sm font-medium">{act}</span><button onClick={()=>{const n=[...altActivities]; n.splice(i,1); setAltActivities(n);}} className="p-2 text-[var(--text-muted)] hover:text-red-400 bg-[var(--bg-input)] rounded-lg"><Trash2 className="w-4 h-4"/></button></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        function WeeklyReviewModal({ selectedDate, currentStep, onClose, onSave }) {
+          const [data, setData] = useState({ binges: '', changeDays: '', weight: '', events: '', progress: '' });
+          const qData = reviewQuestionsByStep[currentStep] || reviewQuestionsByStep[1];
+          const [answers, setAnswers] = useState({});
+          const [textAnswers, setTextAnswers] = useState({});
+
+          return (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
+                <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><ListTodo className="w-6 h-6 text-[var(--theme-primary)]"/> Revisione</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
+                <div className="space-y-6">
+                  <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
+                    <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase mb-4">Riepilogo</h3>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 text-center">N. Abbuffate</label><input type="number" inputMode="numeric" value={data.binges} onChange={e=>setData({...data, binges:e.target.value})} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-center text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"/></div>
+                      <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 text-center">Giorni Positivi</label><input type="number" inputMode="numeric" max="7" value={data.changeDays} onChange={e=>setData({...data, changeDays:e.target.value})} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-center text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"/></div>
+                      <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 text-center">Peso (kg)</label><input type="number" inputMode="decimal" step="0.1" value={data.weight} onChange={e=>setData({...data, weight:e.target.value})} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-center text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"/></div>
+                    </div>
+                    <div className="mb-4"><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Eventi della settimana</label><textarea value={data.events} onChange={e=>setData({...data, events:e.target.value})} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+                    <div className="pt-4 border-t border-[var(--border-color)]"><label className="block text-[10px] font-bold text-[var(--theme-primary)] uppercase mb-1">I miei progressi</label><p className="text-[10px] text-[var(--text-muted)] mb-2 leading-tight">Scrivi qui i miglioramenti fisici e mentali notati.</p><textarea value={data.progress} onChange={e=>setData({...data, progress:e.target.value})} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+                  </div>
+                  <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
+                    <h3 className="text-sm font-bold text-[var(--theme-primary)] uppercase mb-4">Domande Step {currentStep}</h3>
+                    <div className="space-y-4 mb-5">
+                      {qData.checks.map((q, i) => (
+                        <label key={i} className="flex items-start gap-3 p-4 bg-[var(--bg-input)] rounded-xl cursor-pointer hover:opacity-90">
+                          <input type="checkbox" checked={answers[i]||false} onChange={e=>setAnswers({...answers, [i]:e.target.checked})} className="mt-1 w-5 h-5 rounded text-[var(--theme-primary)] shrink-0"/>
+                          <span className="text-sm font-medium text-[var(--text-main)] leading-snug">{q}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="space-y-5 border-t border-[var(--border-color)] pt-5">
+                      {qData.text.map((t, i) => (
+                        <div key={i}><label className="block text-xs font-bold text-[var(--theme-text)] mb-2">{t.label}</label><textarea value={textAnswers[t.id]||''} onChange={e=>setTextAnswers({...textAnswers, [t.id]:e.target.value})} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" rows="3"></textarea></div>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={()=>onSave({ data, answers, textAnswers })} className="w-full py-4 bg-[var(--theme-primary)] text-white font-extrabold uppercase tracking-widest text-xs rounded-2xl hover:opacity-90 active:scale-95 shadow-md transition-all">Salva Revisione</button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        function StatsModal({ settings, updateSetting, entries, weeklyReviews, intros, milestonesAchieved, onClose, onEditIntro }) {
+          const [tab, setTab] = useState('stats');
+          
+          const monitoredDates = [...new Set([...entries.map(e => e.date), ...weeklyReviews.map(r => r.date)])];
+          let currentStreak = 0; let d = new Date();
+          while (true) { const dStr = d.toISOString().split('T')[0]; if (monitoredDates.includes(dStr)) { currentStreak++; d.setDate(d.getDate() - 1); } else break; }
+          
+          // Calendar logic
+          const today = new Date(); const y = today.getFullYear(); const m = today.getMonth();
+          const daysInMonth = new Date(y, m + 1, 0).getDate();
+          const startDay = (new Date(y, m, 1).getDay() + 6) % 7; // Monday = 0
+          
+          const calCells = [];
+          for(let i=0; i<startDay; i++) calCells.push(<div key={`e-${i}`}></div>);
+          for(let i=1; i<=daysInMonth; i++) {
+            const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            const isMon = monitoredDates.includes(dStr); const isPast = i < today.getDate(); const isToday = i === today.getDate();
+            let bg = 'bg-[var(--bg-input)] text-[var(--text-muted)] opacity-50';
+            if(isMon) bg = 'bg-[var(--activity-primary)] text-white font-bold shadow-sm'; else if(isPast) bg = 'bg-[var(--theme-light)] text-[var(--theme-text)] opacity-70'; else if(isToday) bg = 'bg-[var(--bg-card)] border-2 border-[var(--theme-primary)] text-[var(--text-main)] font-bold';
+            calCells.push(<div key={i} className={`aspect-square flex items-center justify-center rounded-xl text-sm transition-all ${bg}`}>{i}</div>);
+          }
+
+          // Weight Chart logic
+          const validReviews = weeklyReviews.filter(r => r.data?.weight).sort((a,b) => a.date.localeCompare(b.date));
+          let chartHtml = null;
+          if (validReviews.length >= 2) {
+            const weights = validReviews.map(r => parseFloat(r.data.weight));
+            const minW = Math.min(...weights) - 2; const maxW = Math.max(...weights) + 2; const range = maxW - minW;
+            const w = 300; const h = 100;
+            const points = weights.map((wt, i) => `${(i / (weights.length - 1)) * w},${h - (((wt - minW) / range) * h)}`).join(' ');
+            chartHtml = (
+              <div className="relative w-full h-32 flex items-end justify-center">
+                <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                    <polyline points={points} fill="none" stroke="var(--theme-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    {weights.map((wt, i) => <circle key={i} cx={(i / (weights.length - 1)) * w} cy={h - (((wt - minW) / range) * h)} r="4" fill="var(--bg-card)" stroke="var(--theme-primary)" strokeWidth="2"/>)}
+                </svg>
+                <div className="absolute -left-6 top-0 text-[10px] font-bold text-[var(--text-muted)]">{maxW.toFixed(1)}</div>
+                <div className="absolute -left-6 bottom-0 text-[10px] font-bold text-[var(--text-muted)]">{minW.toFixed(1)}</div>
+              </div>
+            );
+          }
+
+          const archiveItems = [...weeklyReviews.map(r => ({ ...r, type: 'review' })), ...Object.entries(intros).map(([s, i]) => ({ id: `intro-${s}`, type: 'intro', date: i.date, step: parseInt(s), data: i.answers }))].sort((a,b)=>b.date.localeCompare(a.date));
+
+          return (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl flex flex-col h-[90vh] modal-enter">
+                <div className="flex justify-between items-center mb-6 shrink-0"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><Award className="w-6 h-6 text-[var(--theme-primary)]"/> Progressi</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
+                
+                <div className="flex bg-[var(--bg-input)] p-1 rounded-2xl mb-6 shrink-0">
+                  <button onClick={()=>setTab('stats')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${tab==='stats'?'bg-[var(--bg-card)] text-[var(--theme-primary)] shadow-sm':'text-[var(--text-muted)]'}`}>Statistiche</button>
+                  <button onClick={()=>setTab('ms')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${tab==='ms'?'bg-[var(--bg-card)] text-[var(--activity-text)] shadow-sm':'text-[var(--text-muted)]'}`}>Traguardi</button>
+                  <button onClick={()=>setTab('archive')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${tab==='archive'?'bg-[var(--bg-card)] text-[var(--text-main)] shadow-sm':'text-[var(--text-muted)]'}`}>Archivio</button>
+                </div>
+
+                <div className="overflow-y-auto flex-1 pr-2 space-y-6">
+                  {tab === 'stats' && (
+                    <div className="animate-in fade-in space-y-8">
+                      <div className="flex gap-4">
+                        <div className="flex-1 bg-[var(--bg-card)] p-4 rounded-3xl shadow-sm border border-[var(--border-color)] text-center"><Flame className="w-6 h-6 text-[var(--theme-primary)] mx-auto mb-1"/><p className="text-3xl font-bold text-[var(--text-main)]">{currentStreak}</p><p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Streak</p></div>
+                        <div className="flex-1 bg-[var(--bg-card)] p-4 rounded-3xl shadow-sm border border-[var(--border-color)] text-center"><Award className="w-6 h-6 text-[var(--activity-primary)] mx-auto mb-1"/><p className="text-3xl font-bold text-[var(--text-main)]">{monitoredDates.length}</p><p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Giorni Totali</p></div>
+                      </div>
+                      <div className="bg-[var(--bg-card)] p-6 rounded-3xl shadow-sm border border-[var(--border-color)]"><h3 className="text-sm font-bold text-[var(--text-muted)] uppercase mb-4">Trend del Peso</h3>{chartHtml ? chartHtml : <p className="text-xs text-[var(--text-muted)] italic text-center">Registra almeno 2 pesate nelle revisioni.</p>}</div>
+                      <div className="bg-[var(--bg-card)] p-6 rounded-3xl shadow-sm border border-[var(--border-color)]"><h3 className="text-sm font-bold text-[var(--text-muted)] uppercase mb-4">Mese Corrente</h3><div className="grid grid-cols-7 gap-2">{['L','M','M','G','V','S','D'].map((d,i)=><div key={d+i} className="text-center text-[10px] font-bold text-[var(--text-muted)] opacity-50 mb-2">{d}</div>)}{calCells}</div></div>
+                    </div>
+                  )}
+                  {tab === 'ms' && (
+                    <div className="animate-in fade-in space-y-6">
+                      {settings.currentStep >= 7 && (
+                        <div className="bg-[var(--bg-card)] p-6 rounded-3xl shadow-sm border border-[var(--border-color)] mb-6">
+                          <h3 className="text-sm font-bold text-[var(--theme-primary)] uppercase mb-4">Il mio Grafico a Torta</h3>
+                          <div className="flex items-center justify-center gap-8">
+                            <div className="pie-chart" style={{'--pie-val': `${settings.pieChartValue}%`}}></div>
+                            <div className="flex flex-col gap-4 w-1/2">
+                              <div><label className="text-[10px] font-bold text-[var(--theme-text)] flex justify-between">Peso/Forma <span>{settings.pieChartValue}%</span></label><input type="range" min="0" max="100" value={settings.pieChartValue} onChange={e=>updateSetting('pieChartValue', e.target.value)} className="w-full accent-[var(--theme-primary)]"/></div>
+                              <div><label className="text-[10px] font-bold text-[var(--text-muted)] flex justify-between">Altre Aree <span>{100-settings.pieChartValue}%</span></label></div>
+                            </div>
+                          </div>
                         </div>
                       )}
+                      <div>
+                        <h3 className="text-sm font-bold text-[var(--activity-text)] uppercase mb-4 border-b border-[var(--border-color)] pb-2">Timeline</h3>
+                        <div className="relative border-l-2 border-[var(--theme-border)] ml-4 mt-2 space-y-6 pb-4">
+                          {[1,2,3,4,5,6,7,8].map(step => {
+                            const achieved = !!intros[step]; const isActive = settings.currentStep === step; const endD = isActive ? calculateStepEndDate(step, settings.stepStartDate) : null;
+                            return (
+                              <div key={step} className="relative pl-6">
+                                <div className={`absolute -left-[11px] top-1 w-[20px] h-[20px] rounded-full z-10 transition-all ${achieved?'bg-[var(--activity-primary)] border-2 border-[var(--activity-primary)] shadow-[0_0_10px_rgba(194,216,205,0.8)] flex items-center justify-center':isActive?'bg-[var(--theme-primary)] border-4 border-[var(--theme-light)] shadow-[0_0_15px_rgba(232,180,184,0.6)] flex items-center justify-center': 'bg-[var(--bg-input)] border-2 border-[var(--border-color)]'}`}>
+                                  {achieved ? <CheckCircle2 className="w-3 h-3 text-white" /> : isActive ? <div className="w-2 h-2 bg-white rounded-full"></div> : null}
+                                </div>
+                                <div className={`bg-[var(--bg-card)] border ${isActive?'border-[var(--theme-primary)] shadow-md':'border-[var(--border-color)] opacity-80'} p-4 rounded-2xl`}>
+                                  <h4 className={`font-bold text-sm ${achieved?'text-[var(--activity-text)]':isActive?'text-[var(--theme-text)]':'text-[var(--text-muted)]'} flex items-center justify-between`}>Step {step} {isActive && <span className="text-[9px] bg-[var(--theme-primary)] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">In corso</span>}</h4>
+                                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{achieved ? `Iniziato il ${formatDate(intros[step].date)}` : 'Ancora da sbloccare'}</p>
+                                  {isActive && endD && <p className="text-[10px] text-[var(--theme-text)] mt-2 font-medium bg-[var(--theme-light)] inline-block px-2 py-1 rounded-lg">↳ Bilancio: {formatDate(endD)}</p>}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-[var(--theme-primary)] uppercase mb-4 border-b border-[var(--border-color)] pb-2">Costanza</h3>
+                        <div className="space-y-3">
+                          {milestonesDef.map(ms => {
+                            const achieved = monitoredDates.length >= ms.target;
+                            return (
+                              <div key={ms.target} className={`flex items-center gap-4 p-4 rounded-2xl border ${achieved?'bg-[var(--theme-light)] border-[var(--theme-border)]':'bg-[var(--bg-card)] border-[var(--border-color)] opacity-60'}`}>
+                                <div className={`p-2 rounded-full ${achieved?'bg-[var(--theme-primary)] text-white':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}>{achieved ? <CheckCircle2 className="w-5 h-5"/> : <Trophy className="w-5 h-5"/>}</div>
+                                <div><h4 className={`font-bold text-sm ${achieved?'text-[var(--theme-text)]':'text-[var(--text-muted)]'}`}>{ms.title}</h4><p className="text-[10px] text-[var(--text-muted)]">{ms.desc}</p></div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {tab === 'archive' && (
+                    <div className="animate-in fade-in space-y-4">
+                      {archiveItems.length === 0 ? <p className="text-center text-[var(--text-muted)] py-10">Nessun dato.</p> : archiveItems.map((item, idx) => (
+                        <ArchiveCard key={idx} item={item} onEditIntro={onEditIntro} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        function ArchiveCard({ item, onEditIntro }) {
+          const [expanded, setExpanded] = useState(false);
+          const isIntro = item.type === 'intro';
+          return (
+            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
+              <button onClick={()=>setExpanded(!expanded)} className="w-full p-4 flex items-center justify-between bg-transparent outline-none text-left">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${isIntro?'bg-[var(--theme-light)] text-[var(--theme-text)]':'bg-[var(--activity-light)] text-[var(--activity-text)]'}`}>{isIntro?<BookOpen className="w-4 h-4"/>:<ListTodo className="w-4 h-4"/>}</div>
+                  <div><p className="font-bold text-sm text-[var(--text-main)]">{isIntro?`Inizio Step ${item.step}`:`Revisione Step ${item.step}`}</p><p className="text-[10px] text-[var(--text-muted)]">{formatDate(item.date)}</p></div>
+                </div>
+                {expanded ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]"/> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]"/>}
+              </button>
+              {expanded && (
+                <div className="p-4 pt-0 border-t border-[var(--border-color)] bg-[var(--bg-input)] animate-in fade-in">
+                  {isIntro ? (
+                    <div className="space-y-3 mt-4">
+                      {(introQuestionsByStep[item.step]?.questions||[]).map((q,i)=>(
+                        <div key={i} className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--text-muted)] mb-1">{q}</p><p className="text-sm text-[var(--text-main)] italic">"{item.data[i]||''}"</p></div>
+                      ))}
+                      <button onClick={()=>onEditIntro(item.step)} className="w-full mt-2 py-3 bg-[var(--theme-primary)] text-white text-xs font-bold rounded-xl shadow-sm uppercase">Modifica</button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 mt-4">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Abbuffate</p><p className="text-lg font-black text-[var(--theme-primary)]">{item.data?.binges||'0'}</p></div>
+                        <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Giorni OK</p><p className="text-lg font-black text-[var(--activity-primary)]">{item.data?.changeDays||'0'}</p></div>
+                        <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Peso</p><p className="text-sm font-black text-[var(--text-main)] mt-1">{item.data?.weight?`${item.data.weight}kg`:'-'}</p></div>
+                      </div>
+                      {item.data?.events ? <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--text-muted)] mb-1 uppercase">Eventi</p><p className="text-sm text-[var(--text-main)]">"{item.data.events}"</p></div> : null}
+                      {item.data?.progress ? <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--theme-primary)] mb-1 uppercase">Progressi</p><p className="text-sm text-[var(--text-main)]">"{item.data.progress}"</p></div> : null}
+                      {item.textAnswers ? Object.entries(item.textAnswers).map(([k,v])=>(
+                        <div key={k} className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--theme-text)] mb-1 uppercase">{reviewQuestionsByStep[item.step]?.text?.find(t=>t.id===k)?.label||"Riflessione"}</p><p className="text-sm text-[var(--text-main)] italic">"{v}"</p></div>
+                      )) : null}
                     </div>
                   )}
                 </div>
               )}
-              <div>
-                <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Cibo / Bevanda (se hai mangiato)</label>
-                <textarea value={food} onChange={e=>setFood(e.target.value)} required={!hadUrge} rows="3" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea>
-                <div className="mt-4 space-y-3">
-                  <label className="flex items-center gap-3 cursor-pointer w-fit p-1"><input type="checkbox" checked={isMeal} onChange={e=>setIsMeal(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-base font-bold text-[var(--text-main)]">Pasto principale ( )</span></label>
-                  <div className="p-4 border border-[var(--theme-border)] rounded-2xl bg-[var(--theme-light)] space-y-4">
-                    <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={isExc} onChange={e=>setIsExc(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-base font-medium text-[var(--text-main)]">Quantità eccessiva *</span></label>
-                    <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={lossCtrl} onChange={e=>setLossCtrl(e.target.checked)} className="w-5 h-5 rounded text-[var(--theme-primary)]"/><span className="text-base font-bold text-[var(--theme-text)] flex items-center gap-1">Perdita di controllo <AlertTriangle className="w-4 h-4"/></span></label>
-                    <p className="text-[10px] text-[var(--text-muted)] italic leading-tight">Nota: Abbuffata Oggettiva = Eccesso + Perdita di Controllo.</p>
+            </div>
+          );
+        }
+
+        function IntroStepModal({ step, isEditing, initialAnswers, onClose, onCancel }) {
+          const data = introQuestionsByStep[step] || introQuestionsByStep[1];
+          const [ans, setAns] = useState(initialAnswers || {});
+          return (
+            <div className="fixed inset-0 z-[65] bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl relative overflow-y-auto max-h-[90vh] modal-enter">
+                <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)]">{isEditing?`Modifica Step ${step}`:`Inizio Step ${step}`}</h2>{isEditing ? <button onClick={onCancel} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button> : null}</div>
+                <div className="bg-[var(--theme-light)] border border-[var(--theme-border)] p-5 rounded-3xl mb-6"><h3 className="font-bold text-[var(--theme-text)] text-lg mb-2">{data.title}</h3><p className="text-sm text-[var(--text-main)] leading-relaxed">{data.desc}</p></div>
+                <div className="space-y-4 mb-6">
+                  {data.questions.map((q,i)=>(
+                    <div key={i}><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">{q}</label><textarea value={ans[i]||''} onChange={e=>setAns({...ans,[i]:e.target.value})} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" rows="3"></textarea></div>
+                  ))}
+                </div>
+                <button onClick={()=>onClose(ans)} className="w-full py-4 bg-[var(--theme-primary)] text-white font-extrabold rounded-2xl uppercase tracking-widest text-xs hover:opacity-90 active:scale-95 shadow-md">{isEditing?"Salva":"Inizia"}</button>
+              </div>
+            </div>
+          );
+        }
+
+        function MilestoneModal({ milestone, onClose }) {
+          const [mood, setMood] = useState('good'); const [refl, setRefl] = useState('');
+          return (
+            <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl text-center relative overflow-hidden modal-enter">
+                <Trophy className="w-16 h-16 text-[var(--theme-primary)] mx-auto mb-4" />
+                <h2 className="text-3xl font-serif text-[var(--text-main)] mb-2">Traguardo Sbloccato!</h2>
+                <p className="text-xl font-bold text-[var(--theme-text)] mb-6">{milestone.title}</p>
+                <div className="bg-[var(--theme-light)] border border-[var(--theme-border)] p-4 rounded-2xl mb-8"><p className="text-[var(--text-main)] italic font-medium">"{milestone.quote}"</p></div>
+                <div className="text-left mb-6">
+                  <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase text-center mb-4">Come ti senti?</h3>
+                  <div className="flex justify-center gap-4 mb-6">
+                    <button onClick={()=>setMood('bad')} className={`p-4 rounded-full transition-all ${mood==='bad'?'bg-[var(--theme-primary)] text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Frown className="w-8 h-8"/></button>
+                    <button onClick={()=>setMood('neutral')} className={`p-4 rounded-full transition-all ${mood==='neutral'?'bg-yellow-400 text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Meh className="w-8 h-8"/></button>
+                    <button onClick={()=>setMood('good')} className={`p-4 rounded-full transition-all ${mood==='good'?'bg-[var(--activity-primary)] text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Smile className="w-8 h-8"/></button>
+                    <button onClick={()=>setMood('great')} className={`p-4 rounded-full transition-all ${mood==='great'?'bg-green-500 text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Sparkles className="w-8 h-8"/></button>
                   </div>
+                  <textarea value={refl} onChange={e=>setRefl(e.target.value)} placeholder="Nota per la 'te' del futuro? (Opzionale)" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" rows="2"></textarea>
                 </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Emozioni</label>
-                <div className="flex flex-wrap gap-2">
-                  {EMOZIONI.map(e => {
-                    const act = emotionsFood.includes(e);
-                    return <button key={e} type="button" onClick={()=>toggleEmo(emotionsFood,setEmotionsFood,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? 'bg-[var(--theme-primary)] border-[var(--theme-primary)] text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
-                  })}
-                </div>
+                <button onClick={()=>onClose({target: milestone.target, date: new Date().toISOString().split('T')[0], mood, reflection: refl})} className="w-full py-4 bg-[var(--text-main)] text-[var(--bg-main)] font-bold rounded-2xl hover:opacity-90 uppercase text-xs tracking-widest active:scale-95 transition-all">Continua</button>
               </div>
             </div>
-          )}
+          );
+        }
 
-          {type === 'activity' && (
-            <div className="space-y-6 animate-in fade-in">
-              <div><label className="block text-[10px] font-bold text-[var(--activity-text)] uppercase mb-2">Attività</label><input type="text" required value={actName} onChange={e=>setActName(e.target.value)} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--activity-primary)]"/></div>
-              <div className="bg-[var(--activity-light)] p-5 rounded-3xl border border-[var(--activity-border)] space-y-5">
-                <div>
-                  <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Prima</label>
-                  <div className="flex flex-wrap gap-2">
-                    {EMOZIONI.map(e => {
-                      const act = emBefore.includes(e);
-                      return <button key={e} type="button" onClick={()=>toggleEmo(emBefore,setEmBefore,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? 'bg-[var(--activity-text)] border-[var(--activity-text)] text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-[var(--activity-text)] uppercase mb-2">Dopo</label>
-                  <div className="flex flex-wrap gap-2">
-                    {EMOZIONI.map(e => {
-                      const act = emAfter.includes(e);
-                      return <button key={e} type="button" onClick={()=>toggleEmo(emAfter,setEmAfter,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? 'bg-[var(--activity-text)] border-[var(--activity-text)] text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
-                    })}
-                  </div>
+        function BingeAnalysisModal({ entry, onClose, onSave }) {
+          const [a, setA] = useState({ trigger:'', rule:'', emotion:'', lesson:'' });
+          return (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+              <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
+                <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-serif text-[var(--text-main)] flex items-center gap-2"><Search className="w-5 h-5 text-[var(--theme-primary)]"/> Analisi Chain</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
+                <div className="space-y-4">
+                  <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">1. Innesco</label><textarea value={a.trigger} onChange={e=>setA({...a, trigger:e.target.value})} placeholder="Cosa è successo poco prima?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+                  <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">2. Regole</label><textarea value={a.rule} onChange={e=>setA({...a, rule:e.target.value})} placeholder="Avevi infranto una regola dietetica?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+                  <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">3. Emozioni</label><textarea value={a.emotion} onChange={e=>setA({...a, emotion:e.target.value})} placeholder="Cosa volevi spegnere?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+                  <div><label className="block text-[10px] font-bold text-[var(--theme-primary)] uppercase mb-1">4. Lezione</label><textarea value={a.lesson} onChange={e=>setA({...a, lesson:e.target.value})} placeholder="Se ricapitasse domani, cosa faresti di diverso?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+                  <button onClick={()=>onSave(a)} className="w-full mt-4 py-4 bg-[var(--theme-primary)] text-white font-extrabold uppercase text-xs tracking-widest rounded-2xl shadow-md active:scale-95 transition-all">Salva</button>
                 </div>
               </div>
             </div>
-          )}
+          );
+        }
 
-          <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Note / Contesto</label><textarea value={comments} onChange={e=>setComments(e.target.value)} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
-          <button type="submit" className="w-full py-4 mt-4 bg-[var(--theme-primary)] text-white font-extrabold rounded-2xl shadow-lg uppercase tracking-widest text-sm hover:opacity-90 active:scale-95 transition-all">Salva</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function SettingsModal({ settings, updateSetting, entries, setEntries, userPin, removePin, onClose }) {
-  const handleExport = () => {
-    const dataStr = JSON.stringify(entries, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `diary-bed-backup.json`;
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  };
-  const handleImport = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => { try { const d = JSON.parse(event.target.result); if (Array.isArray(d)) { setEntries(d); onClose(); } } catch (err) { alert("File non valido"); } };
-    reader.readAsText(file);
-  };
-  const endD = calculateStepEndDate(settings.currentStep, settings.stepStartDate);
-
-  return (
-    <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
-        <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><Settings className="w-6 h-6 text-[var(--theme-primary)]"/> Impostazioni</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
-        <div className="space-y-6">
-          <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
-            <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider mb-4">Percorso CBT-E</h3>
-            <select value={settings.currentStep} onChange={e=>{updateSetting('currentStep', parseInt(e.target.value)); updateSetting('stepStartDate', new Date().toISOString().split('T')[0]);}} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none text-[var(--text-main)] font-bold mb-4">
-              <option value="1">Step 1: Iniziare bene</option><option value="2">Step 2: Mangiare regolare</option><option value="3">Step 3: Alternative</option><option value="4">Step 4: Problem Solving</option><option value="5">Step 5: Fare il bilancio</option><option value="6">Step 6: La Dieta</option><option value="7">Step 7: Immagine Corporea</option><option value="8">Step 8: Prevenzione</option>
-            </select>
-            <div className="p-3 bg-[var(--bg-input)] rounded-xl border border-[var(--border-color)] text-xs text-[var(--text-main)] space-y-1"><p><span className="font-bold">Inizio:</span> {formatDate(settings.stepStartDate)}</p>{endD && <p><span className="font-bold">Bilancio stimato:</span> {formatDate(endD)}</p>}</div>
-          </div>
-          <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
-            <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider mb-4">Sicurezza & Aspetto</h3>
-            <div className="flex items-center justify-between mb-4"><span className="font-bold text-[var(--text-main)] text-sm flex items-center gap-2">{userPin?<Lock className="w-4 h-4 text-[var(--theme-primary)]"/>:<Unlock className="w-4 h-4 text-[var(--text-muted)]"/>} Blocco PIN</span>{userPin ? <button onClick={() => {localStorage.setItem('bed-diary-pin', 'disabled'); removePin();}} className="px-3 py-1.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-lg uppercase active:scale-95">Rimuovi</button> : <span className="text-[10px] text-[var(--text-muted)] uppercase">Non attivo</span>}</div>
-            <div className="flex items-center justify-between mb-4"><span className="font-bold text-[var(--text-main)] text-sm flex items-center gap-2"><Moon className="w-4 h-4"/> Scura</span><button onClick={()=>updateSetting('isDark', !settings.isDark)} className={`w-12 h-6 rounded-full relative transition-colors ${settings.isDark?'bg-[var(--theme-primary)]':'bg-[var(--border-color)]'}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${settings.isDark?'translate-x-7':'translate-x-1'}`}></div></button></div>
-            <div className="flex items-center justify-between"><span className="font-bold text-[var(--text-main)] text-sm flex items-center gap-2"><Palette className="w-4 h-4 text-[var(--theme-primary)]"/> Tema</span><div className="flex gap-2">{['pink','aqua','lavender'].map(c => <button key={c} onClick={()=>updateSetting('theme', c)} className={`w-8 h-8 rounded-full border-[3px] transition-all ${settings.theme===c?'scale-110 border-[var(--text-main)]':'border-transparent'}`} style={{backgroundColor: themes[c].light.primary}}></button>)}</div></div>
-          </div>
-          <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
-            <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider mb-4">Dati</h3>
-            <button onClick={handleExport} className="w-full flex items-center justify-center gap-2 bg-[var(--bg-input)] text-[var(--text-main)] py-3 rounded-xl hover:opacity-80 font-bold text-sm mb-3"><Download className="w-4 h-4"/> Esporta Backup</button>
-            <label className="w-full flex items-center justify-center gap-2 bg-[var(--bg-input)] text-[var(--text-main)] py-3 rounded-xl hover:opacity-80 font-bold text-sm cursor-pointer"><Upload className="w-4 h-4"/> Ripristina Backup<input type="file" accept=".json" onChange={handleImport} className="hidden"/></label>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AltActivitiesModal({ altActivities, setAltActivities, onClose }) {
-  const [newAct, setNewAct] = useState('');
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
-        <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><Lightbulb className="w-6 h-6 text-[var(--theme-primary)]"/> Alternative</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
-        <p className="text-xs text-[var(--theme-text)] bg-[var(--theme-light)] p-4 rounded-2xl border border-[var(--theme-border)] mb-6">Tieni questa lista a portata di mano per occupare il tempo finché l'onda dell'impulso non passa.</p>
-        <form onSubmit={e=>{e.preventDefault(); if(newAct.trim()){ setAltActivities([...altActivities, newAct.trim()]); setNewAct(''); }}} className="flex gap-2 mb-6">
-          <input type="text" value={newAct} onChange={e=>setNewAct(e.target.value)} placeholder="Es. Fare un puzzle..." required className="flex-1 p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--theme-primary)] text-[var(--text-main)] text-sm"/>
-          <button type="submit" className="p-3 bg-[var(--theme-primary)] text-white rounded-xl hover:opacity-90"><Plus className="w-5 h-5"/></button>
-        </form>
-        <div className="space-y-3">
-          {altActivities.length === 0 ? <p className="text-center text-[var(--text-muted)] text-sm py-4">Nessuna attività.</p> : altActivities.map((act, i) => (
-            <div key={i} className="flex items-center justify-between bg-[var(--bg-card)] p-3 border border-[var(--border-color)] rounded-xl shadow-sm"><span className="text-[var(--text-main)] text-sm font-medium">{act}</span><button onClick={()=>{const n=[...altActivities]; n.splice(i,1); setAltActivities(n);}} className="p-2 text-[var(--text-muted)] hover:text-red-400 bg-[var(--bg-input)] rounded-lg"><Trash2 className="w-4 h-4"/></button></div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function WeeklyReviewModal({ selectedDate, currentStep, onClose, onSave }) {
-  const [data, setData] = useState({ binges: '', changeDays: '', weight: '', events: '', progress: '' });
-  const qData = reviewQuestionsByStep[currentStep] || reviewQuestionsByStep[1];
-  const [answers, setAnswers] = useState({});
-  const [textAnswers, setTextAnswers] = useState({});
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
-        <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><ListTodo className="w-6 h-6 text-[var(--theme-primary)]"/> Revisione</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
-        <div className="space-y-6">
-          <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
-            <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase mb-4">Riepilogo</h3>
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 text-center">N. Abbuffate</label><input type="number" inputMode="numeric" value={data.binges} onChange={e=>setData({...data, binges:e.target.value})} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-center text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"/></div>
-              <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 text-center">Giorni Positivi</label><input type="number" inputMode="numeric" max="7" value={data.changeDays} onChange={e=>setData({...data, changeDays:e.target.value})} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-center text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"/></div>
-              <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 text-center">Peso (kg)</label><input type="number" inputMode="decimal" step="0.1" value={data.weight} onChange={e=>setData({...data, weight:e.target.value})} className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-center text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"/></div>
-            </div>
-            <div className="mb-4"><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Eventi della settimana</label><textarea value={data.events} onChange={e=>setData({...data, events:e.target.value})} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
-            <div className="pt-4 border-t border-[var(--border-color)]"><label className="block text-[10px] font-bold text-[var(--theme-primary)] uppercase mb-1">I miei progressi</label><p className="text-[10px] text-[var(--text-muted)] mb-2 leading-tight">Scrivi qui i miglioramenti fisici e mentali notati.</p><textarea value={data.progress} onChange={e=>setData({...data, progress:e.target.value})} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
-          </div>
-          <div className="bg-[var(--bg-card)] p-5 rounded-3xl border border-[var(--border-color)]">
-            <h3 className="text-sm font-bold text-[var(--theme-primary)] uppercase mb-4">Domande Step {currentStep}</h3>
-            <div className="space-y-4 mb-5">
-              {qData.checks.map((q, i) => (
-                <label key={i} className="flex items-start gap-3 p-4 bg-[var(--bg-input)] rounded-xl cursor-pointer hover:opacity-90">
-                  <input type="checkbox" checked={answers[i]||false} onChange={e=>setAnswers({...answers, [i]:e.target.checked})} className="mt-1 w-5 h-5 rounded text-[var(--theme-primary)] shrink-0"/>
-                  <span className="text-sm font-medium text-[var(--text-main)] leading-snug">{q}</span>
-                </label>
-              ))}
-            </div>
-            <div className="space-y-5 border-t border-[var(--border-color)] pt-5">
-              {qData.text.map((t, i) => (
-                <div key={i}><label className="block text-xs font-bold text-[var(--theme-text)] mb-2">{t.label}</label><textarea value={textAnswers[t.id]||''} onChange={e=>setTextAnswers({...textAnswers, [t.id]:e.target.value})} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" rows="3"></textarea></div>
-              ))}
-            </div>
-          </div>
-          <button onClick={()=>onSave({ data, answers, textAnswers })} className="w-full py-4 bg-[var(--theme-primary)] text-white font-extrabold uppercase tracking-widest text-xs rounded-2xl hover:opacity-90 active:scale-95 shadow-md transition-all">Salva Revisione</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatsModal({ settings, updateSetting, entries, weeklyReviews, intros, milestonesAchieved, onClose, onEditIntro }) {
-  const [tab, setTab] = useState('stats');
-  
-  const monitoredDates = [...new Set([...entries.map(e => e.date), ...weeklyReviews.map(r => r.date)])];
-  let currentStreak = 0; let d = new Date();
-  while (true) { const dStr = d.toISOString().split('T')[0]; if (monitoredDates.includes(dStr)) { currentStreak++; d.setDate(d.getDate() - 1); } else break; }
-  
-  // Calendar logic
-  const today = new Date(); const y = today.getFullYear(); const m = today.getMonth();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const startDay = (new Date(y, m, 1).getDay() + 6) % 7; // Monday = 0
-  
-  const calCells = [];
-  for(let i=0; i<startDay; i++) calCells.push(<div key={`e-${i}`}></div>);
-  for(let i=1; i<=daysInMonth; i++) {
-    const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-    const isMon = monitoredDates.includes(dStr); const isPast = i < today.getDate(); const isToday = i === today.getDate();
-    let bg = 'bg-[var(--bg-input)] text-[var(--text-muted)] opacity-50';
-    if(isMon) bg = 'bg-[var(--activity-primary)] text-white font-bold shadow-sm'; else if(isPast) bg = 'bg-[var(--theme-light)] text-[var(--theme-text)] opacity-70'; else if(isToday) bg = 'bg-[var(--bg-card)] border-2 border-[var(--theme-primary)] text-[var(--text-main)] font-bold';
-    calCells.push(<div key={i} className={`aspect-square flex items-center justify-center rounded-xl text-sm transition-all ${bg}`}>{i}</div>);
-  }
-
-  // Weight Chart logic
-  const validReviews = weeklyReviews.filter(r => r.data?.weight).sort((a,b) => a.date.localeCompare(b.date));
-  let chartHtml = null;
-  if (validReviews.length >= 2) {
-    const weights = validReviews.map(r => parseFloat(r.data.weight));
-    const minW = Math.min(...weights) - 2; const maxW = Math.max(...weights) + 2; const range = maxW - minW;
-    const w = 300; const h = 100;
-    const points = weights.map((wt, i) => `${(i / (weights.length - 1)) * w},${h - (((wt - minW) / range) * h)}`).join(' ');
-    chartHtml = (
-      <div className="relative w-full h-32 flex items-end justify-center">
-        <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
-            <polyline points={points} fill="none" stroke="var(--theme-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            {weights.map((wt, i) => <circle key={i} cx={(i / (weights.length - 1)) * w} cy={h - (((wt - minW) / range) * h)} r="4" fill="var(--bg-card)" stroke="var(--theme-primary)" strokeWidth="2"/>)}
-        </svg>
-        <div className="absolute -left-6 top-0 text-[10px] font-bold text-[var(--text-muted)]">{maxW.toFixed(1)}</div>
-        <div className="absolute -left-6 bottom-0 text-[10px] font-bold text-[var(--text-muted)]">{minW.toFixed(1)}</div>
-      </div>
-    );
-  }
-
-  const archiveItems = [...weeklyReviews.map(r => ({ ...r, type: 'review' })), ...Object.entries(intros).map(([s, i]) => ({ id: `intro-${s}`, type: 'intro', date: i.date, step: parseInt(s), data: i.answers }))].sort((a,b)=>b.date.localeCompare(a.date));
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl flex flex-col h-[90vh] modal-enter">
-        <div className="flex justify-between items-center mb-6 shrink-0"><h2 className="text-2xl font-serif text-[var(--text-main)] flex items-center gap-2"><Award className="w-6 h-6 text-[var(--theme-primary)]"/> Progressi</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
-        
-        <div className="flex bg-[var(--bg-input)] p-1 rounded-2xl mb-6 shrink-0">
-          <button onClick={()=>setTab('stats')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${tab==='stats'?'bg-[var(--bg-card)] text-[var(--theme-primary)] shadow-sm':'text-[var(--text-muted)]'}`}>Statistiche</button>
-          <button onClick={()=>setTab('ms')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${tab==='ms'?'bg-[var(--bg-card)] text-[var(--activity-text)] shadow-sm':'text-[var(--text-muted)]'}`}>Traguardi</button>
-          <button onClick={()=>setTab('archive')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${tab==='archive'?'bg-[var(--bg-card)] text-[var(--text-main)] shadow-sm':'text-[var(--text-muted)]'}`}>Archivio</button>
-        </div>
-
-        <div className="overflow-y-auto flex-1 pr-2 space-y-6">
-          {tab === 'stats' && (
-            <div className="animate-in fade-in space-y-8">
-              <div className="flex gap-4">
-                <div className="flex-1 bg-[var(--bg-card)] p-4 rounded-3xl shadow-sm border border-[var(--border-color)] text-center"><Flame className="w-6 h-6 text-[var(--theme-primary)] mx-auto mb-1"/><p className="text-3xl font-bold text-[var(--text-main)]">{currentStreak}</p><p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Streak</p></div>
-                <div className="flex-1 bg-[var(--bg-card)] p-4 rounded-3xl shadow-sm border border-[var(--border-color)] text-center"><Award className="w-6 h-6 text-[var(--activity-primary)] mx-auto mb-1"/><p className="text-3xl font-bold text-[var(--text-main)]">{monitoredDates.length}</p><p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Giorni Totali</p></div>
-              </div>
-              <div className="bg-[var(--bg-card)] p-6 rounded-3xl shadow-sm border border-[var(--border-color)]"><h3 className="text-sm font-bold text-[var(--text-muted)] uppercase mb-4">Trend del Peso</h3>{chartHtml ? chartHtml : <p className="text-xs text-[var(--text-muted)] italic text-center">Registra almeno 2 pesate nelle revisioni.</p>}</div>
-              <div className="bg-[var(--bg-card)] p-6 rounded-3xl shadow-sm border border-[var(--border-color)]"><h3 className="text-sm font-bold text-[var(--text-muted)] uppercase mb-4">Mese Corrente</h3><div className="grid grid-cols-7 gap-2">{['L','M','M','G','V','S','D'].map((d,i)=><div key={d+i} className="text-center text-[10px] font-bold text-[var(--text-muted)] opacity-50 mb-2">{d}</div>)}{calCells}</div></div>
-            </div>
-          )}
-          {tab === 'ms' && (
-            <div className="animate-in fade-in space-y-6">
-              {settings.currentStep >= 7 && (
-                <div className="bg-[var(--bg-card)] p-6 rounded-3xl shadow-sm border border-[var(--border-color)] mb-6">
-                  <h3 className="text-sm font-bold text-[var(--theme-primary)] uppercase mb-4">Il mio Grafico a Torta</h3>
-                  <div className="flex items-center justify-center gap-8">
-                    <div className="pie-chart" style={{'--pie-val': `${settings.pieChartValue}%`}}></div>
-                    <div className="flex flex-col gap-4 w-1/2">
-                      <div><label className="text-[10px] font-bold text-[var(--theme-text)] flex justify-between">Peso/Forma <span>{settings.pieChartValue}%</span></label><input type="range" min="0" max="100" value={settings.pieChartValue} onChange={e=>updateSetting('pieChartValue', e.target.value)} className="w-full accent-[var(--theme-primary)]"/></div>
-                      <div><label className="text-[10px] font-bold text-[var(--text-muted)] flex justify-between">Altre Aree <span>{100-settings.pieChartValue}%</span></label></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div>
-                <h3 className="text-sm font-bold text-[var(--activity-text)] uppercase mb-4 border-b border-[var(--border-color)] pb-2">Timeline</h3>
-                <div className="relative border-l-2 border-[var(--theme-border)] ml-4 mt-2 space-y-6 pb-4">
-                  {[1,2,3,4,5,6,7,8].map(step => {
-                    const achieved = !!intros[step]; const isActive = settings.currentStep === step; const endD = isActive ? calculateStepEndDate(step, settings.stepStartDate) : null;
-                    return (
-                      <div key={step} className="relative pl-6">
-                        <div className={`absolute -left-[11px] top-1 w-[20px] h-[20px] rounded-full z-10 transition-all ${achieved?'bg-[var(--activity-primary)] border-2 border-[var(--activity-primary)] shadow-[0_0_10px_rgba(194,216,205,0.8)] flex items-center justify-center':isActive?'bg-[var(--theme-primary)] border-4 border-[var(--theme-light)] shadow-[0_0_15px_rgba(232,180,184,0.6)] flex items-center justify-center': 'bg-[var(--bg-input)] border-2 border-[var(--border-color)]'}`}>
-                          {achieved ? <CheckCircle2 className="w-3 h-3 text-white" /> : isActive ? <div className="w-2 h-2 bg-white rounded-full"></div> : null}
-                        </div>
-                        <div className={`bg-[var(--bg-card)] border ${isActive?'border-[var(--theme-primary)] shadow-md':'border-[var(--border-color)] opacity-80'} p-4 rounded-2xl`}>
-                          <h4 className={`font-bold text-sm ${achieved?'text-[var(--activity-text)]':isActive?'text-[var(--theme-text)]':'text-[var(--text-muted)]'} flex items-center justify-between`}>Step {step} {isActive && <span className="text-[9px] bg-[var(--theme-primary)] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">In corso</span>}</h4>
-                          <p className="text-[10px] text-[var(--text-muted)] mt-1">{achieved ? `Iniziato il ${formatDate(intros[step].date)}` : 'Ancora da sbloccare'}</p>
-                          {isActive && endD && <p className="text-[10px] text-[var(--theme-text)] mt-2 font-medium bg-[var(--theme-light)] inline-block px-2 py-1 rounded-lg">↳ Bilancio: {formatDate(endD)}</p>}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-[var(--theme-primary)] uppercase mb-4 border-b border-[var(--border-color)] pb-2">Costanza</h3>
-                <div className="space-y-3">
-                  {milestonesDef.map(ms => {
-                    const achieved = monitoredDates.length >= ms.target;
-                    return (
-                      <div key={ms.target} className={`flex items-center gap-4 p-4 rounded-2xl border ${achieved?'bg-[var(--theme-light)] border-[var(--theme-border)]':'bg-[var(--bg-card)] border-[var(--border-color)] opacity-60'}`}>
-                        <div className={`p-2 rounded-full ${achieved?'bg-[var(--theme-primary)] text-white':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}>{achieved ? <CheckCircle2 className="w-5 h-5"/> : <Trophy className="w-5 h-5"/>}</div>
-                        <div><h4 className={`font-bold text-sm ${achieved?'text-[var(--theme-text)]':'text-[var(--text-muted)]'}`}>{ms.title}</h4><p className="text-[10px] text-[var(--text-muted)]">{ms.desc}</p></div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-          {tab === 'archive' && (
-            <div className="animate-in fade-in space-y-4">
-              {archiveItems.length === 0 ? <p className="text-center text-[var(--text-muted)] py-10">Nessun dato.</p> : archiveItems.map((item, idx) => (
-                <ArchiveCard key={idx} item={item} onEditIntro={onEditIntro} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ArchiveCard({ item, onEditIntro }) {
-  const [expanded, setExpanded] = useState(false);
-  const isIntro = item.type === 'intro';
-  return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
-      <button onClick={()=>setExpanded(!expanded)} className="w-full p-4 flex items-center justify-between bg-transparent outline-none text-left">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${isIntro?'bg-[var(--theme-light)] text-[var(--theme-text)]':'bg-[var(--activity-light)] text-[var(--activity-text)]'}`}>{isIntro?<BookOpen className="w-4 h-4"/>:<ListTodo className="w-4 h-4"/>}</div>
-          <div><p className="font-bold text-sm text-[var(--text-main)]">{isIntro?`Inizio Step ${item.step}`:`Revisione Step ${item.step}`}</p><p className="text-[10px] text-[var(--text-muted)]">{formatDate(item.date)}</p></div>
-        </div>
-        {expanded ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]"/> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]"/>}
-      </button>
-      {expanded && (
-        <div className="p-4 pt-0 border-t border-[var(--border-color)] bg-[var(--bg-input)] animate-in fade-in">
-          {isIntro ? (
-            <div className="space-y-3 mt-4">
-              {(introQuestionsByStep[item.step]?.questions||[]).map((q,i)=>(
-                <div key={i} className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--text-muted)] mb-1">{q}</p><p className="text-sm text-[var(--text-main)] italic">"{item.data[i]||''}"</p></div>
-              ))}
-              <button onClick={()=>onEditIntro(item.step)} className="w-full mt-2 py-3 bg-[var(--theme-primary)] text-white text-xs font-bold rounded-xl shadow-sm uppercase">Modifica</button>
-            </div>
-          ) : (
-            <div className="space-y-3 mt-4">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Abbuffate</p><p className="text-lg font-black text-[var(--theme-primary)]">{item.data?.binges||'0'}</p></div>
-                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Giorni OK</p><p className="text-lg font-black text-[var(--activity-primary)]">{item.data?.changeDays||'0'}</p></div>
-                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Peso</p><p className="text-sm font-black text-[var(--text-main)] mt-1">{item.data?.weight?`${item.data.weight}kg`:'-'}</p></div>
-              </div>
-              {item.data?.events && <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--text-muted)] mb-1 uppercase">Eventi</p><p className="text-sm text-[var(--text-main)]">"{item.data.events}"</p></div>}
-              {item.data?.progress && <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--theme-primary)] mb-1 uppercase">Progressi</p><p className="text-sm text-[var(--text-main)]">"{item.data.progress}"</p></div>}
-              {item.textAnswers && Object.entries(item.textAnswers).map(([k,v])=>(
-                <div key={k} className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--theme-text)] mb-1 uppercase">{reviewQuestionsByStep[item.step]?.text?.find(t=>t.id===k)?.label||"Riflessione"}</p><p className="text-sm text-[var(--text-main)] italic">"{v}"</p></div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function IntroStepModal({ step, isEditing, initialAnswers, onClose, onCancel }) {
-  const data = introQuestionsByStep[step] || introQuestionsByStep[1];
-  const [ans, setAns] = useState(initialAnswers || {});
-  return (
-    <div className="fixed inset-0 z-[65] bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl relative overflow-y-auto max-h-[90vh] modal-enter">
-        <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-serif text-[var(--text-main)]">{isEditing?`Modifica Step ${step}`:`Inizio Step ${step}`}</h2>{isEditing && <button onClick={onCancel} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button>}</div>
-        <div className="bg-[var(--theme-light)] border border-[var(--theme-border)] p-5 rounded-3xl mb-6"><h3 className="font-bold text-[var(--theme-text)] text-lg mb-2">{data.title}</h3><p className="text-sm text-[var(--text-main)] leading-relaxed">{data.desc}</p></div>
-        <div className="space-y-4 mb-6">
-          {data.questions.map((q,i)=>(
-            <div key={i}><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">{q}</label><textarea value={ans[i]||''} onChange={e=>setAns({...ans,[i]:e.target.value})} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" rows="3"></textarea></div>
-          ))}
-        </div>
-        <button onClick={()=>onClose(ans)} className="w-full py-4 bg-[var(--theme-primary)] text-white font-extrabold rounded-2xl uppercase tracking-widest text-xs hover:opacity-90 active:scale-95 shadow-md">{isEditing?"Salva":"Inizia"}</button>
-      </div>
-    </div>
-  );
-}
-
-function MilestoneModal({ milestone, onClose }) {
-  const [mood, setMood] = useState('good'); const [refl, setRefl] = useState('');
-  return (
-    <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl text-center relative overflow-hidden modal-enter">
-        <Trophy className="w-16 h-16 text-[var(--theme-primary)] mx-auto mb-4" />
-        <h2 className="text-3xl font-serif text-[var(--text-main)] mb-2">Traguardo Sbloccato!</h2>
-        <p className="text-xl font-bold text-[var(--theme-text)] mb-6">{milestone.title}</p>
-        <div className="bg-[var(--theme-light)] border border-[var(--theme-border)] p-4 rounded-2xl mb-8"><p className="text-[var(--text-main)] italic font-medium">"{milestone.quote}"</p></div>
-        <div className="text-left mb-6">
-          <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase text-center mb-4">Come ti senti?</h3>
-          <div className="flex justify-center gap-4 mb-6">
-            <button onClick={()=>setMood('bad')} className={`p-4 rounded-full transition-all ${mood==='bad'?'bg-[var(--theme-primary)] text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Frown className="w-8 h-8"/></button>
-            <button onClick={()=>setMood('neutral')} className={`p-4 rounded-full transition-all ${mood==='neutral'?'bg-yellow-400 text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Meh className="w-8 h-8"/></button>
-            <button onClick={()=>setMood('good')} className={`p-4 rounded-full transition-all ${mood==='good'?'bg-[var(--activity-primary)] text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Smile className="w-8 h-8"/></button>
-            <button onClick={()=>setMood('great')} className={`p-4 rounded-full transition-all ${mood==='great'?'bg-green-500 text-white scale-110 shadow-md':'bg-[var(--bg-input)] text-[var(--text-muted)]'}`}><Sparkles className="w-8 h-8"/></button>
-          </div>
-          <textarea value={refl} onChange={e=>setRefl(e.target.value)} placeholder="Nota per la 'te' del futuro? (Opzionale)" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" rows="2"></textarea>
-        </div>
-        <button onClick={()=>onClose({target: milestone.target, date: new Date().toISOString().split('T')[0], mood, reflection: refl})} className="w-full py-4 bg-[var(--text-main)] text-[var(--bg-main)] font-bold rounded-2xl hover:opacity-90 uppercase text-xs tracking-widest active:scale-95 transition-all">Continua</button>
-      </div>
-    </div>
-  );
-}
-
-function BingeAnalysisModal({ entry, onClose, onSave }) {
-  const [a, setA] = useState({ trigger:'', rule:'', emotion:'', lesson:'' });
-  return (
-    <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[var(--bg-main)] w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto max-h-[90vh] modal-enter">
-        <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-serif text-[var(--text-main)] flex items-center gap-2"><Search className="w-5 h-5 text-[var(--theme-primary)]"/> Analisi Chain</h2><button onClick={onClose} className="p-2 bg-[var(--bg-input)] text-[var(--text-muted)] rounded-full hover:opacity-80"><X className="w-5 h-5"/></button></div>
-        <div className="space-y-4">
-          <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">1. Innesco</label><textarea value={a.trigger} onChange={e=>setA({...a, trigger:e.target.value})} placeholder="Cosa è successo poco prima?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
-          <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">2. Regole</label><textarea value={a.rule} onChange={e=>setA({...a, rule:e.target.value})} placeholder="Avevi infranto una regola dietetica?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
-          <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">3. Emozioni</label><textarea value={a.emotion} onChange={e=>setA({...a, emotion:e.target.value})} placeholder="Cosa volevi spegnere?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
-          <div><label className="block text-[10px] font-bold text-[var(--theme-primary)] uppercase mb-1">4. Lezione</label><textarea value={a.lesson} onChange={e=>setA({...a, lesson:e.target.value})} placeholder="Se ricapitasse domani, cosa faresti di diverso?" rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
-          <button onClick={()=>onSave(a)} className="w-full mt-4 py-4 bg-[var(--theme-primary)] text-white font-extrabold uppercase text-xs tracking-widest rounded-2xl shadow-md active:scale-95 transition-all">Salva</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+        // --- RENDER APP ---
+        const rootElement = document.getElementById('root');
+        const root = createRoot(rootElement);
+        root.render(<App />);
+    </script>
+</body>
+</html>
