@@ -298,7 +298,7 @@ export default function App() {
       {activeModal === 'add' && <AddEntryModal selectedDate={selectedDate} currentStep={settings.currentStep} altActivities={altActivities} onClose={() => setActiveModal(null)} onSave={(e) => { setEntries([...entries, e].sort((a,b)=>a.time.localeCompare(b.time))); setActiveModal(null); showToast("Registrato!"); }} />}
       {activeModal === 'settings' && <SettingsModal settings={settings} updateSetting={updateSetting} entries={entries} setEntries={setEntries} userPin={pin} removePin={() => setPin(null)} onClose={() => setActiveModal(null)} />}
       {activeModal === 'alt' && <AltActivitiesModal altActivities={altActivities} setAltActivities={setAltActivities} onClose={() => setActiveModal(null)} />}
-      {activeModal === 'review' && <WeeklyReviewModal selectedDate={selectedDate} currentStep={settings.currentStep} onClose={() => setActiveModal(null)} onSave={(rev) => { setWeeklyReviews([...weeklyReviews, rev]); setActiveModal(null); showToast("Revisione salvata!"); }} />}
+      {activeModal === 'review' && <WeeklyReviewModal selectedDate={selectedDate} currentStep={settings.currentStep} onClose={() => setActiveModal(null)} onSave={(rev) => { setWeeklyReviews([...weeklyReviews, { ...rev, id: Date.now(), date: selectedDate, step: settings.currentStep }]); setActiveModal(null); showToast("Revisione salvata!"); }} />}
       {activeModal === 'stats' && <StatsModal settings={settings} updateSetting={updateSetting} entries={entries} weeklyReviews={weeklyReviews} intros={intros} milestonesAchieved={milestonesAchieved} onClose={() => setActiveModal(null)} onEditIntro={(step) => { setEditingIntroStep(step); setActiveModal('intro_edit'); }} />}
       {activeModal === 'intro' && <IntroStepModal step={settings.currentStep} onClose={(ans) => { setIntros({...intros, [settings.currentStep]: {date: getTodayStr(), answers: ans}}); setActiveModal(null); }} />}
       {activeModal === 'intro_edit' && <IntroStepModal step={editingIntroStep} isEditing={true} initialAnswers={intros[editingIntroStep]?.answers || {}} onClose={(ans) => { setIntros({...intros, [editingIntroStep]: {date: intros[editingIntroStep]?.date || getTodayStr(), answers: ans}}); setActiveModal('stats'); }} onCancel={() => setActiveModal('stats')} />}
@@ -455,14 +455,6 @@ function AddEntryModal({ selectedDate, currentStep, altActivities, onClose, onSa
   }, [timerRunning, timeLeft]);
 
   const toggleEmo = (arr, setArr, emo) => { if(arr.includes(emo)) setArr(arr.filter(e=>e!==emo)); else setArr([...arr, emo]); };
-  const EmoBtns = ({arr, setArr, colorClass}) => (
-    <div className="flex flex-wrap gap-2">
-      {EMOZIONI.map(e => {
-        const act = arr.includes(e);
-        return <button key={e} type="button" onClick={()=>toggleEmo(arr,setArr,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? colorClass+' text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
-      })}
-    </div>
-  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -546,7 +538,15 @@ function AddEntryModal({ selectedDate, currentStep, altActivities, onClose, onSa
                   </div>
                 </div>
               </div>
-              <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Emozioni</label><EmoBtns arr={emotionsFood} setArr={setEmotionsFood} colorClass="bg-[var(--theme-primary)] border-[var(--theme-primary)]"/></div>
+              <div>
+                <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Emozioni</label>
+                <div className="flex flex-wrap gap-2">
+                  {EMOZIONI.map(e => {
+                    const act = emotionsFood.includes(e);
+                    return <button key={e} type="button" onClick={()=>toggleEmo(emotionsFood,setEmotionsFood,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? 'bg-[var(--theme-primary)] border-[var(--theme-primary)] text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
@@ -554,13 +554,29 @@ function AddEntryModal({ selectedDate, currentStep, altActivities, onClose, onSa
             <div className="space-y-6 animate-in fade-in">
               <div><label className="block text-[10px] font-bold text-[var(--activity-text)] uppercase mb-2">Attività</label><input type="text" required value={actName} onChange={e=>setActName(e.target.value)} className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-base text-[var(--text-main)] outline-none focus:ring-2 focus:ring-[var(--activity-primary)]"/></div>
               <div className="bg-[var(--activity-light)] p-5 rounded-3xl border border-[var(--activity-border)] space-y-5">
-                <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Prima</label><EmoBtns arr={emBefore} setArr={setEmBefore} colorClass="bg-[var(--activity-text)] border-[var(--activity-text)]"/></div>
-                <div><label className="block text-[10px] font-bold text-[var(--activity-text)] uppercase mb-2">Dopo</label><EmoBtns arr={emAfter} setArr={setEmAfter} colorClass="bg-[var(--activity-text)] border-[var(--activity-text)]"/></div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Prima</label>
+                  <div className="flex flex-wrap gap-2">
+                    {EMOZIONI.map(e => {
+                      const act = emBefore.includes(e);
+                      return <button key={e} type="button" onClick={()=>toggleEmo(emBefore,setEmBefore,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? 'bg-[var(--activity-text)] border-[var(--activity-text)] text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[var(--activity-text)] uppercase mb-2">Dopo</label>
+                  <div className="flex flex-wrap gap-2">
+                    {EMOZIONI.map(e => {
+                      const act = emAfter.includes(e);
+                      return <button key={e} type="button" onClick={()=>toggleEmo(emAfter,setEmAfter,e)} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 ${act ? 'bg-[var(--activity-text)] border-[var(--activity-text)] text-white shadow-sm' : 'bg-[var(--bg-main)] text-[var(--text-muted)] border-[var(--border-color)]'}`}>{e}</button>
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Note</label><textarea value={comments} onChange={e=>setComments(e.target.value)} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
+          <div><label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-2">Note / Contesto</label><textarea value={comments} onChange={e=>setComments(e.target.value)} rows="2" className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-main)] resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"></textarea></div>
           <button type="submit" className="w-full py-4 mt-4 bg-[var(--theme-primary)] text-white font-extrabold rounded-2xl shadow-lg uppercase tracking-widest text-sm hover:opacity-90 active:scale-95 transition-all">Salva</button>
         </form>
       </div>
@@ -568,7 +584,7 @@ function AddEntryModal({ selectedDate, currentStep, altActivities, onClose, onSa
   );
 }
 
-function SettingsModal({ settings, updateSetting, entries, setEntries, userPin, removePin, onClose, calculateStepEndDate }) {
+function SettingsModal({ settings, updateSetting, entries, setEntries, userPin, removePin, onClose }) {
   const handleExport = () => {
     const dataStr = JSON.stringify(entries, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
@@ -677,7 +693,7 @@ function WeeklyReviewModal({ selectedDate, currentStep, onClose, onSave }) {
   );
 }
 
-function StatsModal({ settings, updateSetting, entries, weeklyReviews, intros, milestonesAchieved, onClose, onEditIntro, calculateStepEndDate }) {
+function StatsModal({ settings, updateSetting, entries, weeklyReviews, intros, milestonesAchieved, onClose, onEditIntro }) {
   const [tab, setTab] = useState('stats');
   
   const monitoredDates = [...new Set([...entries.map(e => e.date), ...weeklyReviews.map(r => r.date)])];
@@ -830,13 +846,13 @@ function ArchiveCard({ item, onEditIntro }) {
           ) : (
             <div className="space-y-3 mt-4">
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Abbuffate</p><p className="text-lg font-black text-[var(--theme-primary)]">{item.data.data?.binges||'0'}</p></div>
-                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Giorni OK</p><p className="text-lg font-black text-[var(--activity-primary)]">{item.data.data?.changeDays||'0'}</p></div>
-                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Peso</p><p className="text-sm font-black text-[var(--text-main)] mt-1">{item.data.data?.weight?`${item.data.data.weight}kg`:'-'}</p></div>
+                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Abbuffate</p><p className="text-lg font-black text-[var(--theme-primary)]">{item.data?.binges||'0'}</p></div>
+                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Giorni OK</p><p className="text-lg font-black text-[var(--activity-primary)]">{item.data?.changeDays||'0'}</p></div>
+                <div className="bg-[var(--bg-card)] p-2 rounded-xl text-center border border-[var(--border-color)]"><p className="text-[9px] text-[var(--text-muted)] uppercase font-bold">Peso</p><p className="text-sm font-black text-[var(--text-main)] mt-1">{item.data?.weight?`${item.data.weight}kg`:'-'}</p></div>
               </div>
-              {item.data.data?.events && <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--text-muted)] mb-1 uppercase">Eventi</p><p className="text-sm text-[var(--text-main)]">"{item.data.data.events}"</p></div>}
-              {item.data.data?.progress && <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--theme-primary)] mb-1 uppercase">Progressi</p><p className="text-sm text-[var(--text-main)]">"{item.data.data.progress}"</p></div>}
-              {item.data.textAnswers && Object.entries(item.data.textAnswers).map(([k,v])=>(
+              {item.data?.events && <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--text-muted)] mb-1 uppercase">Eventi</p><p className="text-sm text-[var(--text-main)]">"{item.data.events}"</p></div>}
+              {item.data?.progress && <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--theme-primary)] mb-1 uppercase">Progressi</p><p className="text-sm text-[var(--text-main)]">"{item.data.progress}"</p></div>}
+              {item.textAnswers && Object.entries(item.textAnswers).map(([k,v])=>(
                 <div key={k} className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-color)]"><p className="text-[10px] font-bold text-[var(--theme-text)] mb-1 uppercase">{reviewQuestionsByStep[item.step]?.text?.find(t=>t.id===k)?.label||"Riflessione"}</p><p className="text-sm text-[var(--text-main)] italic">"{v}"</p></div>
               ))}
             </div>
